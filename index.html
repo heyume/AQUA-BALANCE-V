@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AquaBalance - Classroom Edition</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #7fd8f0; color: #012a3d; }
+  #app { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+  #canvasWrap { position: absolute; inset: 0; z-index: 0; }
+  canvas { display: block; width: 100% !important; height: 100% !important; }
+  #topHUD { position: relative; z-index: 10; padding: 5px 8px 4px; background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.45) 70%, transparent 100%); display: flex; flex-direction: column; gap: 4px; }
+  .hudRow { display: flex; gap: 5px; align-items: center; justify-content: space-between; }
+  .title { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #0077aa; }
+  .title span { color: #0088bb; font-weight: 500; font-size: 9px; }
+  .audioToggle { background: rgba(255,255,255,0.85); border: 1.5px solid rgba(0,170,220,0.5); border-radius: 8px; padding: 3px 7px; font-size: 13px; cursor: pointer; transition: all 0.2s; margin-left: auto; }
+  .audioToggle:active { transform: scale(0.9); }
+  .audioToggle.muted { opacity: 0.5; }
+  .statPill { flex: 1; background: rgba(255,255,255,0.85); border: 1.5px solid rgba(0,170,220,0.5); border-radius: 8px; padding: 3px 5px; font-size: 8px; text-align: center; color: #01557a; font-weight: 600; }
+  .statPill b { display: block; font-size: 11px; color: #0088bb; }
+  .statPill.coin b { color: #d4a017; font-size: 10px; }
+  #missionPanel { position: relative; z-index: 10; margin: 4px 8px 0; background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(220,245,255,0.85)); border: 1.5px solid #33c1ff; border-radius: 10px; padding: 5px 8px; display: flex; align-items: center; gap: 6px; }
+  #missionPanel .mIcon { font-size: 16px; }
+  #missionPanel .mBody { flex: 1; }
+  #missionPanel .mTitle { font-size: 9px; color: #0078a8; font-weight: 800; }
+  #missionPanel .mDesc { font-size: 8px; color: #2a6a8a; margin-top: 1px; }
+  #missionPanel .mProg { font-size: 9px; color: #00a878; font-weight: 800; }
+  #missionPanel.complete { border-color: #00cc88; background: linear-gradient(135deg, #e6fff4, #c8ffec); }
+  #eventPanel { position: relative; z-index: 10; margin: 3px 8px 0; background: linear-gradient(135deg, #fff4d0, #ffe8a0); border: 1.5px solid #e5a814; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  #eventPanel .eIcon { font-size: 15px; }
+  #eventPanel .eBody { flex: 1; }
+  #eventPanel .eTitle { font-size: 9px; color: #7a5500; font-weight: 800; }
+  #eventPanel .eDesc { font-size: 8px; color: #8a6a20; margin-top: 1px; }
+  #eventPanel .eReward { font-size: 9px; color: #d4a017; font-weight: 800; }
+  #envPanel { position: relative; z-index: 10; margin: 4px 8px 0; background: rgba(255,255,255,0.88); border: 1.5px solid rgba(0,170,220,0.4); border-radius: 10px; padding: 6px 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .envItem { text-align: center; }
+  .envItem label { font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #2a7aa0; display: block; margin-bottom: 2px; font-weight: 700; }
+  .bar { height: 6px; background: #d6ecf5; border-radius: 4px; overflow: hidden; }
+  .bar > div { height: 100%; width: 50%; border-radius: 4px; transition: width 0.4s; }
+  .bar .tempFill { background: linear-gradient(90deg,#3ab8ff,#ffcc00); }
+  .bar .phFill { background: linear-gradient(90deg,#ff5577,#3ddc97); }
+  .bar .oxyFill { background: linear-gradient(90deg,#4a6cff,#00d9b0); }
+  .envVal { font-size: 9px; color: #01557a; margin-top: 2px; display: block; font-weight: 700; }
+  #trophicPanel { position: absolute; z-index: 10; bottom: 88px; left: 8px; right: 8px; background: rgba(255,255,255,0.85); border: 1.5px solid #33c1ff; border-radius: 12px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; max-height: 24vh; overflow-y: auto; }
+  .trophicTitle { font-size: 8.5px; letter-spacing: 1.5px; color: #0077aa; text-transform: uppercase; font-weight: 800; display:flex; justify-content:space-between; align-items:center; margin-bottom: 2px; }
+  .trophicTitle .infoBtn { background:transparent; border:none; color:#0088bb; font-size:9px; cursor:pointer; text-decoration:underline; font-weight: 700; }
+  .levelRow { display: flex; align-items: center; gap: 5px; background: rgba(234,248,255,0.7); border: 1px solid #a8ddff; border-radius: 8px; padding: 3px 6px; cursor: pointer; height: 26px; }
+  .levelRow.cant-afford { border-color: #ff4466; background: rgba(255,235,240,0.75); }
+  .levelIcon { font-size: 15px; width: 18px; text-align: center; }
+  .levelInfo { flex: 1; min-width: 0; }
+  .levelName { font-size: 8.5px; color: #01557a; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .levelBar { height: 4px; background: #b8e2f5; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+  .levelBar > div { height: 100%; transition: width 0.4s; border-radius: 3px; }
+  .levelPop { font-size: 10px; color: #00a878; font-weight: 800; min-width: 28px; text-align: right; }
+  .levelBtns { display: flex; gap: 3px; }
+  .lvlBtn { background: linear-gradient(180deg, #4dd2ff, #00a8e0); border: none; color: #ffffff; border-radius: 6px; font-size: 12px; font-weight: 800; width: 24px; height: 22px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lvlBtn.minus { background: linear-gradient(180deg, #ff8899, #ee4466); }
+  #bottomActions { position: absolute; z-index: 10; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; padding: 5px 6px 8px; background: linear-gradient(0deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 60%, transparent 100%); }
+  .actionBtn { background: linear-gradient(180deg, #ffffff, #e0f4ff); border: 1.5px solid #33c1ff; color: #01557a; border-radius: 10px; padding: 5px 2px; font-size: 7px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; text-align: center; line-height: 1.1; font-weight: 800; }
+  .actionBtn .ico { font-size: 14px; }
+  .actionBtn.quiz { background: linear-gradient(180deg, #fff8d0, #ffe680); border-color: #d4a017; color: #7a5500; }
+  .actionBtn.rank { background: linear-gradient(180deg, #ffe6f0, #ffc8dd); border-color: #ff6699; color: #a0103a; }
+  #logBox { position: absolute; z-index: 9; top: 205px; left: 8px; right: 8px; max-height: 55px; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; gap: 2px; }
+  .logLine { font-size: 8px; color: #01557a; background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 5px; border-left: 3px solid #33c1ff; font-weight: 600; }
+  .logLine.good { border-left-color: #00cc88; color: #007a52; }
+  .logLine.bad { border-left-color: #ff4466; color: #a0103a; }
+  .logLine.warn { border-left-color: #ffaa00; color: #8a5500; }
+  .logLine.coin { border-left-color: #d4a017; color: #7a5500; }
+  .logLine.event { border-left-color: #ff6699; color: #a0103a; }
+  #modal { position: absolute; inset: 0; z-index: 50; background: rgba(180,225,245,0.75); display: none; align-items: center; justify-content: center; padding: 20px; }
+  #modal.show { display: flex; }
+  .modalCard { background: linear-gradient(160deg, #ffffff, #e6f6ff); border: 3px solid #33c1ff; border-radius: 18px; padding: 18px; max-width: 440px; width: 100%; box-shadow: 0 8px 32px rgba(0,150,220,0.4); text-align: center; max-height: 88vh; overflow-y: auto; color: #01557a; }
+  .modalCard h2 { font-size: 17px; color: #0088bb; margin-bottom: 8px; font-weight: 800; }
+  .modalCard p { font-size: 11px; color: #2a6a8a; line-height: 1.55; margin-bottom: 12px; text-align: left; font-weight: 500; }
+  .modalCard p.center { text-align: center; }
+  .modalBtn { background: linear-gradient(180deg, #4dd2ff, #00a8e0); border: none; color: #ffffff; font-weight: 800; font-size: 11.5px; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin: 3px; }
+  .modalBtn.secondary { background: linear-gradient(180deg, #ffffff, #d6ecf5); color: #0088bb; border: 2px solid #33c1ff; }
+  .modalBtn.teacher { background: linear-gradient(180deg, #88aaff, #4477ff); color: #ffffff; }
+  .modalBtn.gold { background: linear-gradient(180deg, #ffd966, #e5a814); color: #5a3c00; }
+  .catGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+  .catCard { background: linear-gradient(180deg, #f0faff, #d6ecff); border: 2px solid #a8ddff; border-radius: 10px; padding: 10px 8px; cursor: pointer; text-align: center; }
+  .catCard .cIcon { font-size: 22px; }
+  .catCard .cName { font-size: 9.5px; color: #01557a; font-weight: 800; margin-top: 2px; }
+  .catCard .cCount { font-size: 8px; color: #4a90b8; font-weight: 600; }
+  .teacherStats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .tStat { background: linear-gradient(135deg, #f0faff, #d6ecff); border: 1.5px solid #a8ddff; border-radius: 10px; padding: 8px; text-align: center; }
+  .tStat .tsVal { font-size: 18px; font-weight: 800; color: #0088bb; }
+  .tStat .tsLabel { font-size: 8.5px; color: #2a6a8a; font-weight: 700; margin-top: 2px; }
+  .studentRow { display: flex; align-items: center; gap: 6px; padding: 7px 9px; background: linear-gradient(180deg, #f0faff, #e0f4ff); border: 1.5px solid #b8e2ff; border-radius: 10px; margin-bottom: 4px; text-align: left; }
+  .studentRow.top { background: linear-gradient(180deg, #fff8d0, #ffe680); border-color: #d4a017; }
+  .sRank { font-size: 14px; font-weight: 800; min-width: 22px; text-align: center; color: #d4a017; }
+  .sInfo { flex: 1; min-width: 0; }
+  .sName { font-size: 10.5px; color: #01557a; font-weight: 800; }
+  .sMeta { font-size: 8.5px; color: #4a90b8; }
+  .sScore { text-align: right; }
+  .sScore .sVal { font-size: 11px; color: #00a878; font-weight: 800; }
+  .sScore .sSub { font-size: 8px; color: #d4a017; font-weight: 700; }
+  .accuracyRow { display: flex; align-items: center; gap: 8px; padding: 6px 9px; background: #f0faff; border: 1.5px solid #b8e2ff; border-radius: 8px; margin-bottom: 4px; text-align: left; }
+  .accIcon { font-size: 18px; }
+  .accInfo { flex: 1; }
+  .accName { font-size: 9.5px; color: #01557a; font-weight: 800; }
+  .accBar { height: 5px; background: #d6ecf5; border-radius: 3px; overflow: hidden; margin-top: 3px; }
+  .accBar > div { height: 100%; border-radius: 3px; }
+  .accVal { font-size: 10.5px; font-weight: 800; color: #0088bb; min-width: 40px; text-align: right; }
+  .rankRow { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: linear-gradient(180deg, #f0faff, #e0f4ff); border: 1.5px solid #b8e2ff; border-radius: 10px; margin-bottom: 5px; text-align: left; }
+  .rankRow.gold { background: linear-gradient(180deg, #fff8d0, #ffe680); border-color: #d4a017; }
+  .rankRow.silver { background: linear-gradient(180deg, #f5f5f5, #e0e0e0); border-color: #a0a0a0; }
+  .rankRow.bronze { background: linear-gradient(180deg, #ffe8d0, #ffcc99); border-color: #cc8844; }
+  .rankRow.me { box-shadow: 0 0 0 2.5px #ff5577 inset; }
+  .rankPos { font-size: 18px; font-weight: 800; width: 32px; text-align: center; color: #d4a017; }
+  .rankName { flex: 1; font-size: 11px; color: #01557a; font-weight: 700; }
+  .rankName small { display: block; font-size: 8px; color: #4a90b8; font-weight: 500; }
+  .rankScore { font-size: 12px; font-weight: 800; color: #00a878; text-align: right; }
+  .codexHeader { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #b8e2ff; }
+  .codexIcon { font-size: 36px; }
+  .codexTitle { text-align: left; }
+  .codexTitle h2 { font-size: 15px; margin: 0; color: #0077aa; }
+  .codexTitle .latin { font-size: 9px; font-style: italic; color: #4a90b8; }
+  .codexSection { text-align: left; margin-bottom: 8px; }
+  .codexSection h4 { font-size: 9px; color: #0088bb; text-transform: uppercase; margin-bottom: 3px; font-weight: 800; }
+  .codexSection p { font-size: 10.5px; color: #2a5a75; line-height: 1.5; margin: 0; font-weight: 500; }
+  .codexBadge { display: inline-block; font-size: 8.5px; padding: 2px 8px; border-radius: 10px; background: #d6f0ff; color: #0077aa; border: 1px solid #7fc9ec; margin-right: 4px; margin-bottom: 4px; font-weight: 700; }
+  .codexFact { background: #e6fff4; border-left: 4px solid #00cc88; padding: 7px 9px; border-radius: 8px; font-size: 10px; color: #006644; margin-top: 6px; font-weight: 500; }
+  .quizHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 7px 10px; background: linear-gradient(135deg, #fff8d0, #ffe680); border-radius: 8px; border: 2px solid #d4a017; }
+  .quizHeader .qTitle { font-size: 10px; font-weight: 800; color: #7a5500; }
+  .quizHeader .qReward { font-size: 10px; font-weight: 800; color: #d4a017; }
+  .quizHeader .qCat { font-size: 8.5px; color: #7a5500; font-weight: 700; display:block; }
+  .quizQuestion { font-size: 11.5px; color: #01557a; font-weight: 700; text-align: left; margin-bottom: 10px; line-height: 1.45; padding: 9px 11px; background: #f0faff; border-radius: 10px; border-left: 4px solid #33c1ff; }
+  .quizOptions { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .quizOpt { text-align: left; padding: 10px 12px; font-size: 11px; background: linear-gradient(180deg, #ffffff, #eaf8ff); border: 2px solid #a8ddff; border-radius: 10px; color: #01557a; font-weight: 600; cursor: pointer; }
+  .quizOpt.correct { background: linear-gradient(180deg, #c8ffdd, #88ffbb); border-color: #00cc88; color: #005a3a; }
+  .quizOpt.wrong { background: linear-gradient(180deg, #ffd0d8, #ffaabb); border-color: #ff4466; color: #7a0020; }
+  .quizOpt.disabled { pointer-events: none; opacity: 0.7; }
+  .quizFeedback { padding: 9px 11px; border-radius: 10px; font-size: 10.5px; text-align: left; line-height: 1.45; margin-bottom: 8px; font-weight: 600; }
+  .quizFeedback.ok { background: #e6fff4; border-left: 4px solid #00cc88; color: #005a3a; }
+  .quizFeedback.err { background: #ffe6ec; border-left: 4px solid #ff4466; color: #7a0020; }
+  .quizProgress { display: flex; gap: 4px; justify-content: center; margin-bottom: 10px; }
+  .quizProgress .dot { width: 8px; height: 8px; border-radius: 50%; background: #d6ecf5; }
+  .quizProgress .dot.active { background: #33c1ff; transform: scale(1.3); }
+  .quizProgress .dot.correct { background: #00cc88; }
+  .quizProgress .dot.wrong { background: #ff4466; }
+  .coinBurst { position: absolute; top: 50%; left: 50%; font-size: 28px; pointer-events: none; animation: burst 1.3s ease-out forwards; z-index: 100; font-weight: 800; color: #d4a017; text-shadow: 0 0 12px #ffd966; white-space: nowrap; }
+  @keyframes burst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1); } }
+  #eventBanner { position: absolute; z-index: 30; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.8); background: linear-gradient(135deg,#ff5577,#ee2255); border: 3px solid #ffffff; border-radius: 16px; padding: 14px 20px; text-align: center; pointer-events: none; opacity: 0; transition: all 0.4s; max-width: 300px; }
+  #eventBanner.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  #eventBanner h3 { font-size: 14px; color: #ffffff; margin-bottom: 4px; font-weight: 800; }
+  #eventBanner p { font-size: 10.5px; color: #fff0f4; font-weight: 600; }
+  #loginScreen { position: absolute; inset: 0; z-index: 200; background: linear-gradient(160deg, #a8ecff 0%, #7dd8f5 40%, #2a8fc4 100%); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .loginCard { background: linear-gradient(160deg, #ffffff, #e6f6ff); border: 3px solid #33c1ff; border-radius: 20px; padding: 24px; max-width: 360px; width: 100%; box-shadow: 0 12px 40px rgba(0,80,140,0.35); text-align: center; }
+  .loginCard h1 { font-size: 22px; color: #0088bb; margin-bottom: 4px; font-weight: 800; }
+  .loginCard .subtitle { font-size: 10.5px; color: #4a90b8; margin-bottom: 16px; }
+  .loginCard .emojiBig { font-size: 48px; margin-bottom: 6px; }
+  .loginInput { width: 100%; padding: 12px 14px; font-size: 14px; border: 2px solid #a8ddff; border-radius: 12px; background: #f0faff; color: #01557a; font-weight: 700; margin-bottom: 10px; outline: none; text-align: center; }
+  .loginInput:focus { border-color: #33c1ff; }
+  .loginBtn { width: 100%; padding: 13px; background: linear-gradient(180deg, #4dd2ff, #00a8e0); border: none; color: #ffffff; font-weight: 800; font-size: 14px; border-radius: 12px; cursor: pointer; margin-bottom: 6px; }
+  .loginBtn.gold { background: linear-gradient(180deg, #ffd966, #e5a814); color: #5a3c00; }
+  .loginInfo { font-size: 9.5px; color: #7a9ab8; margin-top: 10px; line-height: 1.5; }
+  .loginRecent { font-size: 9px; color: #4a90b8; margin-top: 8px; }
+  .loginRecent span { background: #e0f4ff; padding: 2px 8px; border-radius: 10px; margin: 2px; display: inline-block; cursor: pointer; font-weight: 700; color: #0088bb; border: 1px solid #a8ddff; }
+  .achRow { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #f0faff; border: 1.5px solid #b8e2ff; border-radius: 10px; margin-bottom: 5px; text-align: left; }
+  .achRow.unlocked { background: linear-gradient(135deg, #e6fff4, #ccffee); border-color: #00cc88; }
+  .achIcon { font-size: 22px; width: 30px; text-align: center; }
+  .achBody { flex: 1; }
+  .achTitle { font-size: 10.5px; color: #01557a; font-weight: 800; }
+  .achDesc { font-size: 8.5px; color: #4a90b8; margin-top: 1px; }
+  .achState { font-size: 9px; font-weight: 800; color: #00a878; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="canvasWrap"></div>
+
+  <div id="loginScreen">
+    <div class="loginCard">
+      <div class="emojiBig">🌊</div>
+      <h1>AquaBalance</h1>
+      <div class="subtitle">Bright Reef Protocol — Classroom Edition</div>
+      <input type="text" class="loginInput" id="loginInput" placeholder="Masukkan nama kamu..." maxlength="20" autocomplete="off">
+      <button class="loginBtn" id="loginStudent">🚀 MULAI MENYELAM</button>
+      <button class="loginBtn gold" id="loginTeacher">👩‍🏫 DASHBOARD GURU</button>
+      <div class="loginRecent" id="loginRecent"></div>
+      <div class="loginInfo">💡 Data progres disimpan otomatis per nama siswa.</div>
+    </div>
+  </div>
+
+  <div id="topHUD">
+    <div class="hudRow">
+      <div class="title">🌊 AQUABALANCE <span id="userNameLabel">Penjaga Laut</span></div>
+      <button class="audioToggle" id="audioToggle" title="Toggle Suara">🔊</button>
+    </div>
+    <div class="hudRow">
+      <div class="statPill">Hari<b id="statDay">1</b></div>
+      <div class="statPill">Energi<b id="statEnergy">100</b></div>
+      <div class="statPill">Biodiv<b id="statBio">0%</b></div>
+      <div class="statPill coin" id="coinPill">💰 Saldo<b id="statCoin">Rp 0</b></div>
+    </div>
+  </div>
+
+  <div id="missionPanel">
+    <div class="mIcon" id="mIcon">🎯</div>
+    <div class="mBody">
+      <div class="mTitle" id="mTitle">Misi 1</div>
+      <div class="mDesc" id="mDesc">-</div>
+    </div>
+    <div class="mProg" id="mProg">0/1</div>
+  </div>
+
+  <div id="eventPanel">
+    <div class="eIcon" id="eIcon">🎪</div>
+    <div class="eBody">
+      <div class="eTitle" id="eTitle">Event Hari Ini</div>
+      <div class="eDesc" id="eDesc">-</div>
+    </div>
+    <div class="eReward" id="eReward">+Rp 0</div>
+  </div>
+
+  <div id="envPanel">
+    <div class="envItem"><label>Suhu</label><div class="bar"><div class="tempFill" id="tempBar"></div></div><span class="envVal" id="tempVal">26°C</span></div>
+    <div class="envItem"><label>pH</label><div class="bar"><div class="phFill" id="phBar"></div></div><span class="envVal" id="phVal">8.1</span></div>
+    <div class="envItem"><label>Oksigen</label><div class="bar"><div class="oxyFill" id="oxyBar"></div></div><span class="envVal" id="oxyVal">80%</span></div>
+  </div>
+
+  <div id="logBox"></div>
+
+  <div id="trophicPanel">
+    <div class="trophicTitle">
+      <span>⚡ Piramida Energi</span>
+      <button class="infoBtn" id="btnInfo">ℹ️ Codex</button>
+    </div>
+    <div id="levelsContainer"></div>
+  </div>
+
+  <div id="bottomActions">
+    <button class="actionBtn" id="btnPhotosyn"><span class="ico">☀️</span>Sinar</button>
+    <button class="actionBtn" id="btnFilter"><span class="ico">🧪</span>Filter</button>
+    <button class="actionBtn" id="btnRestock"><span class="ico">🐟</span>Restock</button>
+    <button class="actionBtn quiz" id="btnQuiz"><span class="ico">📝</span>Kuis</button>
+    <button class="actionBtn rank" id="btnRank"><span class="ico">🏆</span>Rank</button>
+    <button class="actionBtn" id="btnChart"><span class="ico">📊</span>Grafik</button>
+  </div>
+
+  <div id="eventBanner">
+    <h3 id="eventTitle">⚠️ BAHAYA</h3>
+    <p id="eventDesc">-</p>
+  </div>
+
+  <div id="modal">
+    <div class="modalCard">
+      <h2 id="modalTitle">AquaBalance</h2>
+      <div id="modalText"></div>
+      <div id="modalActions" style="display:flex;justify-content:center;gap:6px;margin-top:8px;flex-wrap:wrap;">
+        <button class="modalBtn" id="modalBtn">MULAI</button>
+        <button class="modalBtn secondary" id="modalBtn2" style="display:none">BATAL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const AudioEngine = {
+  ctx: null, masterGain: null, musicGain: null, sfxGain: null,
+  musicPlaying: false, musicNodes: [], muted: false, musicTimeout: null,
+  init() {
+    if (this.ctx) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.ctx.createGain(); this.masterGain.gain.value = 0.6; this.masterGain.connect(this.ctx.destination);
+      this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.12; this.musicGain.connect(this.masterGain);
+      this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.5; this.sfxGain.connect(this.masterGain);
+    } catch(e) { console.warn('Audio init failed', e); }
+  },
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+  setMuted(m) { this.muted = m; if (this.masterGain) this.masterGain.gain.value = m ? 0 : 0.6; },
+  tone(freq, duration, type = 'sine', gainVal = 0.3, startDelay = 0) {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime + startDelay;
+    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(gainVal, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.connect(gain); gain.connect(this.sfxGain);
+    osc.start(t); osc.stop(t + duration + 0.05);
+  },
+  playCorrect() { this.init(); this.resume(); this.tone(880, 0.15, 'sine', 0.35); this.tone(1320, 0.2, 'sine', 0.25, 0.08); },
+  playWrong() { this.init(); this.resume(); this.tone(180, 0.25, 'sawtooth', 0.3); this.tone(120, 0.3, 'sawtooth', 0.25, 0.05); },
+  playCoin() { this.init(); this.resume(); this.tone(1046, 0.08, 'square', 0.25); this.tone(1568, 0.15, 'square', 0.2, 0.06); },
+  playBuy() { this.init(); this.resume(); this.tone(440, 0.08, 'triangle', 0.3); this.tone(660, 0.12, 'triangle', 0.25, 0.05); },
+  playFanfare() { this.init(); this.resume(); [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.3, 'sine', 0.3, i * 0.1)); this.tone(1568, 0.5, 'sine', 0.25, 0.45); },
+  playAlert() { this.init(); this.resume(); this.tone(300, 0.15, 'sawtooth', 0.35); this.tone(400, 0.15, 'sawtooth', 0.35, 0.2); this.tone(300, 0.25, 'sawtooth', 0.35, 0.4); },
+  playVictory() { this.init(); this.resume(); [523, 523, 523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.3, i * 0.15)); this.tone(1318, 0.7, 'triangle', 0.25, 1.0); },
+  playFail() { this.init(); this.resume(); this.tone(440, 0.3, 'sine', 0.3); this.tone(330, 0.4, 'sine', 0.28, 0.25); this.tone(220, 0.8, 'sine', 0.25, 0.55); },
+  startMusic() {
+    this.init(); this.resume();
+    if (!this.ctx || this.musicPlaying) return;
+    this.musicPlaying = true;
+    const chords = [[261.63, 329.63, 392.00], [220.00, 277.18, 329.63], [174.61, 220.00, 261.63], [196.00, 246.94, 293.66]];
+    let idx = 0;
+    const playChord = () => {
+      if (!this.musicPlaying || this.muted) return;
+      const chord = chords[idx % chords.length]; idx++;
+      chord.forEach((f, i) => {
+        const t = this.ctx.currentTime + i * 0.15;
+        const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.15, t + 1);
+        gain.gain.linearRampToValueAtTime(0.12, t + 2.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 4);
+        osc.connect(gain); gain.connect(this.musicGain);
+        osc.start(t); osc.stop(t + 4);
+        this.musicNodes.push(osc);
+      });
+      if (this.musicPlaying) this.musicTimeout = setTimeout(playChord, 4000);
+    };
+    playChord();
+  },
+  stopMusic() {
+    this.musicPlaying = false;
+    if (this.musicTimeout) clearTimeout(this.musicTimeout);
+    this.musicNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+    this.musicNodes = [];
+  }
+};
+
+function formatRupiah(n) { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+
+const CATEGORIES = [
+  { id: 'Rantai Makanan', icon: '🍽️', name: 'Rantai Makanan' },
+  { id: 'Aliran Energi', icon: '⚡', name: 'Aliran Energi' },
+  { id: 'Simbiosis', icon: '🤝', name: 'Simbiosis' },
+  { id: 'Polusi Laut', icon: '🌊', name: 'Polusi Laut' },
+  { id: 'Ekosistem', icon: '🌿', name: 'Ekosistem' },
+  { id: 'Biologi Laut', icon: '🐟', name: 'Biologi Laut' }
+];
+
+const CODEX = {
+  prod: { name: 'Fitoplankton', latin: 'Chaetoceros sp.', icon: '🟢', role: 'Produsen Primer', habitat: 'Lapisan permukaan (0–50 m)', tags: ['Autotrof', 'Fotosintesis'], desc: 'Fitoplankton adalah mikroalga yang melakukan fotosintesis. Mereka menyumbang >50% oksigen bumi!', fact: 'Setiap 1 kg fitoplankton menopang ~100 g zooplankton, 10 g ikan kecil, dan hanya 1 g ikan besar.' },
+  herb: { name: 'Ikan Karang Herbivora', latin: 'Acanthurus triostegus', icon: '🐠', role: 'Konsumen Primer', habitat: 'Terumbu karang (0–40 m)', tags: ['Herbivora', 'Grazing'], desc: 'Ikan seperti surgeonfish dan parrotfish memakan alga yang menutupi karang.', fact: 'Parrotfish dapat memakan alga hingga 30% dari berat tubuhnya per hari!' },
+  carn: { name: 'Ikan Pemangsa', latin: 'Lutjanus campechanus', icon: '🐡', role: 'Konsumen Sekunder', habitat: 'Zona mesopelagik (20–200 m)', tags: ['Karnivora', 'Predator'], desc: 'Ikan seperti snapper dan barracuda memangsa ikan-ikan kecil.', fact: 'Barracuda dapat berenang hingga 43 km/jam dengan strategi ambush predator.' },
+  apex: { name: 'Hiu Apex Predator', latin: 'Carcharhinus limbatus', icon: '🦈', role: 'Konsumen Tersier', habitat: 'Laut lepas (0–300 m)', tags: ['Predator Puncak', 'Keystone Species'], desc: 'Hiu adalah apex predator laut. Tanpa mereka, terjadi trophic cascade.', fact: 'Ketika hiu hampir punah di Karibia, terumbu karang mati karena tertutup alga!' }
+};
+
+const QUIZ_BANK = [
+  { cat: 'Rantai Makanan', q: 'Urutan yang benar dalam rantai makanan laut adalah...', o: ['Fitoplankton → Ikan kecil → Ikan besar → Hiu', 'Hiu → Ikan besar → Ikan kecil → Fitoplankton', 'Ikan besar → Fitoplankton → Ikan kecil', 'Fitoplankton → Hiu → Ikan kecil → Ikan besar'], a: 0, exp: 'Energi mengalir dari produsen ke konsumen tingkat atas.' },
+  { cat: 'Rantai Makanan', q: 'Organisme yang berperan sebagai produsen dalam ekosistem laut adalah...', o: ['Fitoplankton dan alga', 'Zooplankton', 'Ikan hiu', 'Bakteri pengurai'], a: 0, exp: 'Produsen adalah organisme autotrof yang membuat makanan sendiri.' },
+  { cat: 'Rantai Makanan', q: 'Apa perbedaan utama rantai makanan dan jaring-jaring makanan?', o: ['Rantai 1 jalur, jaring-jaring banyak jalur', 'Rantai lebih panjang', 'Jaring-jaring hanya di darat', 'Keduanya sama'], a: 0, exp: 'Jaring-jaring makanan adalah kumpulan rantai makanan yang saling berhubungan.' },
+  { cat: 'Rantai Makanan', q: 'Konsumen tingkat II dalam ekosistem laut adalah...', o: ['Ikan pemangsa yang memakan ikan kecil', 'Fitoplankton', 'Zooplankton', 'Rumput laut'], a: 0, exp: 'Konsumen II adalah pemakan konsumen I (herbivora).' },
+  { cat: 'Rantai Makanan', q: 'Yang terjadi jika produsen (fitoplankton) di laut hilang?', o: ['Seluruh rantai makanan kolaps', 'Ikan jadi lebih banyak', 'Hiu berkembang pesat', 'Tidak ada dampak'], a: 0, exp: 'Produsen adalah fondasi rantai makanan.' },
+  { cat: 'Rantai Makanan', q: 'Zooplankton dalam rantai makanan laut berperan sebagai...', o: ['Konsumen tingkat I (herbivora)', 'Produsen', 'Konsumen tingkat III', 'Pengurai'], a: 0, exp: 'Zooplankton memakan fitoplankton, jadi konsumen tingkat I.' },
+  { cat: 'Rantai Makanan', q: 'Pengurai (dekomposer) di ekosistem laut adalah...', o: ['Bakteri dan jamur yang menguraikan sisa organik', 'Ikan pemakan plankton', 'Ikan besar', 'Rumput laut'], a: 0, exp: 'Pengurai mengubah bahan organik mati menjadi nutrisi anorganik.' },
+  { cat: 'Rantai Makanan', q: 'Jika hiu punah, yang pertama terjadi adalah...', o: ['Populasi ikan karnivora menengah meledak', 'Fitoplankton hilang', 'Air jadi jernih', 'Suhu naik'], a: 0, exp: 'Tanpa predator puncak, terjadi trophic cascade.' },
+  { cat: 'Rantai Makanan', q: 'Contoh rantai makanan di terumbu karang adalah...', o: ['Alga → Ikan herbivora → Ikan karnivora → Hiu', 'Hiu → Alga → Ikan kecil', 'Ikan karnivora → Alga → Ikan herbivora', 'Air → Alga → Karang'], a: 0, exp: 'Alga produsen, herbivora makan alga, karnivora makan herbivora.' },
+  { cat: 'Rantai Makanan', q: 'Panjang rantai makanan terbatas 4-5 tingkat karena...', o: ['Energi makin sedikit di setiap tingkat', 'Ikan tidak suka makan', 'Ikan tidak bisa berenang jauh', 'Air laut makin asin'], a: 0, exp: 'Energi hilang 90% tiap transfer, tingkat di atas tidak cukup energi.' },
+  { cat: 'Aliran Energi', q: 'Berapa persen energi yang berpindah ke tingkat trofik berikutnya?', o: ['10%', '50%', '90%', '100%'], a: 0, exp: 'Hanya ~10% energi berpindah; 90% hilang sebagai panas.' },
+  { cat: 'Aliran Energi', q: 'Mengapa individu di puncak piramida paling sedikit?', o: ['Karena energi makin sedikit tiap tingkat', 'Karena hiu tidak butuh makan', 'Karena predator cepat mati', 'Karena tidak ada mangsa'], a: 0, exp: 'Energi menyusut 90% tiap transfer trofik.' },
+  { cat: 'Aliran Energi', q: 'Bentuk piramida energi seharusnya...', o: ['Makin ke atas makin kecil', 'Makin ke atas makin besar', 'Sama besar', 'Tidak beraturan'], a: 0, exp: 'Piramida energi selalu mengerucut ke atas.' },
+  { cat: 'Aliran Energi', q: 'Jika fitoplankton 10.000 kkal, berapa untuk ikan besar (konsumen III)?', o: ['10 kkal', '1.000 kkal', '100 kkal', '5.000 kkal'], a: 0, exp: '10.000 × 10% × 10% × 10% = 10 kkal.' },
+  { cat: 'Aliran Energi', q: 'Aliran energi dalam ekosistem bersifat...', o: ['Searah dan tidak dapat didaur ulang', 'Siklus berulang', 'Bolak-balik', 'Acak'], a: 0, exp: 'Energi mengalir satu arah, tidak dapat didaur ulang.' },
+  { cat: 'Aliran Energi', q: 'Jika produsen 100.000 kkal, berapa energi di konsumen tingkat II?', o: ['1.000 kkal', '10.000 kkal', '100 kkal', '50.000 kkal'], a: 0, exp: '100.000 × 10% × 10% = 1.000 kkal.' },
+  { cat: 'Aliran Energi', q: 'Sumber energi utama dalam ekosistem laut adalah...', o: ['Matahari', 'Air laut', 'Batu karang', 'Ikan besar'], a: 0, exp: 'Matahari adalah sumber energi utama yang ditangkap produsen.' },
+  { cat: 'Aliran Energi', q: 'Pernyataan BENAR tentang piramida energi adalah...', o: ['Total energi berkurang tiap tingkat', 'Total energi bertambah tiap tingkat', 'Energi tetap sama', 'Energi berputar'], a: 0, exp: 'Piramida energi menyusut ke atas karena hukum termodinamika.' },
+  { cat: 'Aliran Energi', q: 'Energi hilang dari ekosistem sebagian besar karena...', o: ['Respirasi yang menghasilkan panas', 'Ikan berenang cepat', 'Air laut menguap', 'Karang makan ikan'], a: 0, exp: 'Respirasi melepaskan energi sebagai panas.' },
+  { cat: 'Aliran Energi', q: 'Ekosistem dengan hanya 2 tingkat trofik biasanya karena...', o: ['Energi tidak cukup untuk tingkat di atasnya', 'Ikan tidak mau makan', 'Tidak ada matahari', 'Air terlalu dingin'], a: 0, exp: 'Kurangnya energi untuk mendukung tingkat trofik tambahan.' },
+  { cat: 'Simbiosis', q: 'Hubungan ikan badut dan anemon laut adalah simbiosis...', o: ['Mutualisme', 'Parasitisme', 'Kommensalisme', 'Predasi'], a: 0, exp: 'Mutualisme: keduanya untung.' },
+  { cat: 'Simbiosis', q: 'Ikan remora menempel pada hiu mendapat sisa makanan, hiu tidak dirugikan. Ini...', o: ['Kommensalisme', 'Mutualisme', 'Parasitisme', 'Amensalisme'], a: 0, exp: 'Kommensalisme: satu untung, satu netral.' },
+  { cat: 'Simbiosis', q: 'Cacing parasit di usus ikan adalah contoh...', o: ['Parasitisme', 'Mutualisme', 'Kommensalisme', 'Simbiosis'], a: 0, exp: 'Parasitisme: satu untung, satu dirugikan.' },
+  { cat: 'Simbiosis', q: 'Hubungan karang dan zooxanthellae termasuk...', o: ['Mutualisme', 'Parasitisme', 'Kommensalisme', 'Predasi'], a: 0, exp: 'Mutualisme: alga memberi energi, karang memberi tempat.' },
+  { cat: 'Simbiosis', q: 'Contoh simbiosis mutualisme di laut adalah...', o: ['Ikan gobi dengan udang pistol', 'Hiu dengan ikan kecil', 'Cacing di usus ikan', 'Bakteri patogen'], a: 0, exp: 'Ikan gobi dan udang pistol saling menjaga.' },
+  { cat: 'Simbiosis', q: 'Simbiosis yang menguntungkan satu pihak dan pihak lain tidak terpengaruh disebut...', o: ['Kommensalisme', 'Mutualisme', 'Parasitisme', 'Predasi'], a: 0, exp: 'Kommensalisme: satu untung (+), satu netral (0).' },
+  { cat: 'Simbiosis', q: 'Simbiosis yang menguntungkan kedua pihak adalah...', o: ['Mutualisme', 'Parasitisme', 'Kommensalisme', 'Amensalisme'], a: 0, exp: 'Mutualisme: keduanya untung (+/+).' },
+  { cat: 'Simbiosis', q: 'Contoh simbiosis parasitisme di ekosistem laut adalah...', o: ['Cacing pita di usus ikan', 'Ikan badut dengan anemon', 'Karang dengan zooxanthellae', 'Ikan remora dengan hiu'], a: 0, exp: 'Cacing pita mengambil nutrisi dari ikan.' },
+  { cat: 'Simbiosis', q: 'Hubungan antara spons laut dan bakteri di dalamnya adalah...', o: ['Mutualisme', 'Parasitisme', 'Predasi', 'Kompetisi'], a: 0, exp: 'Bakteri mendapat tempat tinggal, spons mendapat nutrisi.' },
+  { cat: 'Simbiosis', q: 'Zooxanthellae adalah...', o: ['Alga simbiotik yang hidup di jaringan karang', 'Jenis ikan kecil', 'Bakteri patogen', 'Rumput laut'], a: 0, exp: 'Zooxanthellae adalah alga yang hidup bersimbiosis dengan karang.' },
+  { cat: 'Polusi Laut', q: 'Dampak utama mikroplastik bagi ekosistem laut?', o: ['Tertelan biota dan merusak pencernaan', 'Menyuburkan plankton', 'Menambah oksigen', 'Menaikkan pH'], a: 0, exp: 'Mikroplastik terakumulasi dalam rantai makanan.' },
+  { cat: 'Polusi Laut', q: 'Coral bleaching terjadi karena...', o: ['Suhu naik, karang keluarkan zooxanthellae', 'Karang dimakan ikan', 'Air terlalu dingin', 'Oksigen berlebih'], a: 0, exp: 'Suhu naik 1-2°C membuat karang stres.' },
+  { cat: 'Polusi Laut', q: 'Apa yang dimaksud dengan Red Tide?', o: ['Ledakan alga beracun mematikan biota laut', 'Air laut merah karena hiu', 'Pasang saat bulan merah', 'Matahari terbenam'], a: 0, exp: 'Red tide adalah ledakan alga dinoflagellata beracun.' },
+  { cat: 'Polusi Laut', q: 'Bagaimana polusi CO₂ memengaruhi ekosistem laut?', o: ['Menurunkan pH air (asidifikasi)', 'Menambah makanan', 'Menaikkan pH', 'Tidak berpengaruh'], a: 0, exp: 'CO₂ larut membentuk asam karbonat yang merusak karang.' },
+  { cat: 'Polusi Laut', q: 'Mengapa hiu disebut "keystone species"?', o: ['Menjaga keseimbangan dengan memangsa predator menengah', 'Karena paling besar', 'Karena tidak makan ikan', 'Karena tinggal di dasar'], a: 0, exp: 'Tanpa hiu, populasi predator menengah meledak.' },
+  { cat: 'Polusi Laut', q: 'Dampak overfishing pada rantai makanan laut...', o: ['Rantai makanan terganggu', 'Makin stabil', 'Populasi plankton naik', 'Tidak ada dampak'], a: 0, exp: 'Overfishing memicu trophic cascade.' },
+  { cat: 'Polusi Laut', q: 'Turbiditas air tinggi menghambat...', o: ['Fotosintesis fitoplankton', 'Pernapasan hiu', 'Gerakan ikan besar', 'Reproduksi karang'], a: 0, exp: 'Air keruh menghalangi cahaya matahari.' },
+  { cat: 'Polusi Laut', q: 'Apa yang dimaksud bioakumulasi?', o: ['Penumpukan zat pencemar dalam tubuh organisme', 'Pertumbuhan plankton', 'Migrasi ikan', 'Reproduksi hiu'], a: 0, exp: 'Zat pencemar makin terkonsentrasi di tingkat trofik atas.' },
+  { cat: 'Polusi Laut', q: 'Eutrofikasi menyebabkan...', o: ['Ledakan alga, oksigen turun, zona mati', 'Ikan makin sehat', 'Air makin jernih', 'pH naik'], a: 0, exp: 'Nutrisi berlebih memicu ledakan alga yang menguras oksigen.' },
+  { cat: 'Polusi Laut', q: 'Tindakan paling efektif mengurangi polusi laut adalah...', o: ['Kurangi plastik sekali pakai dan olah limbah', 'Tambah predator', 'Tangkap semua ikan', 'Tebar pupuk'], a: 0, exp: 'Pencegahan dari sumber adalah cara paling efektif.' },
+  { cat: 'Polusi Laut', q: 'Zona mati (dead zone) di laut terjadi karena...', o: ['Oksigen habis akibat ledakan alga yang membusuk', 'Air laut membeku', 'Terlalu banyak ikan', 'Terlalu banyak hiu'], a: 0, exp: 'Saat alga mati dan membusuk, dekomposer menguras oksigen.' },
+  { cat: 'Polusi Laut', q: 'Apa dampak hujan asam terhadap ekosistem laut?', o: ['pH air turun, mengganggu cangkang & karang', 'Air jadi jernih', 'Ikan jadi banyak', 'Suhu naik drastis'], a: 0, exp: 'Hujan asam menurunkan pH yang merusak cangkang.' },
+  { cat: 'Polusi Laut', q: 'Pestisida berlebih dapat mencemari laut melalui...', o: ['Aliran air dari daratan (runoff)', 'Hujan salju', 'Angin laut', 'Gempa bawah laut'], a: 0, exp: 'Pestisida tercuci dari tanah ke sungai lalu ke laut.' },
+  { cat: 'Polusi Laut', q: 'Apa yang dimaksud dengan biomagnifikasi?', o: ['Peningkatan konsentrasi zat pencemar di tingkat trofik atas', 'Migrasi ikan besar', 'Pertumbuhan karang cepat', 'Peningkatan oksigen'], a: 0, exp: 'Zat pencemar seperti merkuri meningkat konsentrasinya di predator puncak.' },
+  { cat: 'Polusi Laut', q: 'Limbah minyak di laut berdampak pada...', o: ['Bulu & insang biota tertutup minyak', 'Menyuburkan plankton', 'Air jadi bersih', 'Karang tumbuh cepat'], a: 0, exp: 'Minyak melapisi insang dan bulu hewan laut.' },
+  { cat: 'Ekosistem', q: 'Daya dukung lingkungan (carrying capacity) adalah...', o: ['Jumlah maksimum populasi yang dapat didukung lingkungan', 'Kecepatan ikan', 'Warna air ideal', 'Jumlah spesies'], a: 0, exp: 'Daya dukung menentukan batas populasi maksimum.' },
+  { cat: 'Ekosistem', q: 'Ekosistem seimbang ditandai dengan...', o: ['Semua trofik terisi dengan proporsi seimbang', 'Hanya ada produsen', 'Tidak ada predator', 'Hanya ada hiu'], a: 0, exp: 'Keseimbangan ekosistem ketika semua trofik berperan proporsional.' },
+  { cat: 'Ekosistem', q: 'Detritivora adalah...', o: ['Organisme pemakan sisa-sisa organik', 'Pemakan tumbuhan hidup', 'Pemakan daging segar', 'Produsen'], a: 0, exp: 'Detritivora menguraikan sisa organik.' },
+  { cat: 'Ekosistem', q: 'Jika herbivora meningkat tajam tanpa predator, yang terjadi...', o: ['Alga habis, karang rusak', 'Karang makin sehat', 'Hiu muncul', 'Fitoplankton meledak'], a: 0, exp: 'Overgrazing terjadi ketika tidak ada predator.' },
+  { cat: 'Ekosistem', q: 'Biodiversitas tinggi menunjukkan...', o: ['Ekosistem sehat dan stabil', 'Ekosistem rusak', 'Banyak polusi', 'Suhu air naik'], a: 0, exp: 'Biodiversitas tinggi = ekosistem stabil dan tahan gangguan.' },
+  { cat: 'Ekosistem', q: 'Zona fotik adalah zona laut yang...', o: ['Masih ditembus cahaya matahari untuk fotosintesis', 'Paling gelap', 'Paling dalam', 'Paling dingin'], a: 0, exp: 'Zona fotik adalah bagian atas laut tempat cahaya masih bisa menembus.' },
+  { cat: 'Ekosistem', q: 'Karang disebut "hutan hujan laut" karena...', o: ['Menjadi rumah bagi ribuan spesies', 'Berwarna hijau', 'Tumbuh tinggi', 'Berbuah'], a: 0, exp: 'Karang adalah habitat dengan biodiversitas tertinggi di laut.' },
+  { cat: 'Ekosistem', q: 'Air pasang surut memengaruhi ekosistem pantai karena...', o: ['Mengubah kadar oksigen, suhu, dan salinitas', 'Membuat ikan berenang cepat', 'Mengubah warna air', 'Menambah jumlah hiu'], a: 0, exp: 'Pasang surut menciptakan kondisi dinamis bagi biota pantai.' },
+  { cat: 'Ekosistem', q: 'Marine Protected Area (MPA) bertujuan untuk...', o: ['Melindungi habitat laut dari eksploitasi berlebihan', 'Menangkap ikan sebanyak mungkin', 'Menambah polusi', 'Membuat kapal cepat'], a: 0, exp: 'MPA adalah kawasan konservasi untuk memulihkan ekosistem laut.' },
+  { cat: 'Ekosistem', q: 'Apa yang terjadi jika karang mati di suatu wilayah?', o: ['Banyak ikan kehilangan habitat & makanan', 'Ikan jadi lebih banyak', 'Air jadi keruh', 'Hiu datang'], a: 0, exp: 'Karang adalah habitat penting. Tanpanya, banyak spesies ikan hilang.' },
+  { cat: 'Biologi Laut', q: 'Cara hiu mendeteksi mangsa di air keruh adalah...', o: ['Elektroresepsi (ampula Lorenzini)', 'Melihat dengan jelas', 'Mendengar suara', 'Mencium bau saja'], a: 0, exp: 'Ampula Lorenzini mendeteksi medan listrik lemah dari otot mangsa.' },
+  { cat: 'Biologi Laut', q: 'Bioluminesensi pada hewan laut dalam berfungsi untuk...', o: ['Menarik mangsa atau mengusir predator', 'Membuat air terang', 'Menghangatkan tubuh', 'Bernapas'], a: 0, exp: 'Bioluminesensi adalah produksi cahaya oleh organisme hidup.' },
+  { cat: 'Biologi Laut', q: 'Insang pada ikan berfungsi untuk...', o: ['Mengambil oksigen dari air', 'Menyaring makanan', 'Berenang cepat', 'Menyerang musuh'], a: 0, exp: 'Insang mengekstrak oksigen terlarut dari air.' },
+  { cat: 'Biologi Laut', q: 'Ikan yang bermigrasi dari laut ke sungai untuk bertelur disebut...', o: ['Anadromus', 'Katadromus', 'Amfibi', 'Mamalia'], a: 0, exp: 'Contohnya salmon, yang kembali ke sungai asalnya untuk bertelur.' },
+  { cat: 'Biologi Laut', q: 'Kemampuan ikan mengatur suhu tubuh disebut...', o: ['Ektotermik (berdarah dingin)', 'Endotermik', 'Hibernasi', 'Estivasi'], a: 0, exp: 'Sebagian besar ikan ektotermik, suhu tubuh mengikuti lingkungan.' }
+];
+
+const MISSIONS = [
+  { id: 1, icon: '🌱', title: 'Misi 1: Awal Kehidupan', desc: 'Tanam 20 fitoplankton.', check: s => s.populations.prod >= 20, progress: s => `${Math.min(s.populations.prod, 20)}/20`, reward: 50, rewardRp: 5000, learn: 'Produsen primer adalah fondasi ekosistem.' },
+  { id: 2, icon: '🐠', title: 'Misi 2: Herbivora Hadir', desc: 'Tambahkan 8 ikan karang.', check: s => s.populations.herb >= 8, progress: s => `${Math.min(s.populations.herb, 8)}/8`, reward: 80, rewardRp: 10000, learn: 'Konsumen primer mengubah energi dari produsen.' },
+  { id: 3, icon: '🐡', title: 'Misi 3: Predator Muncul', desc: 'Tambah 4 ikan karnivora.', check: s => s.populations.carn >= 4, progress: s => `${Math.min(s.populations.carn, 4)}/4`, reward: 120, rewardRp: 15000, learn: 'Konsumen sekunder mengontrol herbivora.' },
+  { id: 4, icon: '🦈', title: 'Misi 4: Sang Penguasa', desc: 'Bawa 1 hiu ke kubah.', check: s => s.populations.apex >= 1, progress: s => `${Math.min(s.populations.apex, 1)}/1`, reward: 200, rewardRp: 25000, learn: 'Apex predator adalah keystone species.' },
+  { id: 5, icon: '🏆', title: 'Misi 5: Ekosistem Sejahtera', desc: 'Biodiversitas ≥ 70% dan Hari 20.', check: s => s.biodiversity >= 70 && s.day >= 20, progress: s => `${s.biodiversity}% • H${s.day}/20`, reward: 500, rewardRp: 100000, learn: 'Ekosistem sehat punya semua trofik seimbang.' }
+];
+
+const EVENT_TYPES = [
+  { id: 'quiz_rush', icon: '⚡', title: 'Quiz Rush!', desc: 'Jawab 5 soal benar berturut-turut.', reward: 15000, rewardText: '+Rp 15.000', check: (s, ex) => ex && ex.quizStreak >= 5, progress: (s, ex) => `${(ex && ex.quizStreak) || 0}/5` },
+  { id: 'perfect_score', icon: '🎯', title: 'Perfect Score', desc: 'Skor sempurna (5/5) dalam 1 sesi kuis.', reward: 20000, rewardText: '+Rp 20.000', check: (s, ex) => ex && ex.perfectThisSession, progress: (s, ex) => ex && ex.perfectThisSession ? '1/1' : '0/1' },
+  { id: 'biodiversity_up', icon: '🌊', title: 'Laut Lestari', desc: 'Biodiversitas ≥ 50% hari ini.', reward: 12000, rewardText: '+Rp 12.000', check: (s) => s.biodiversity >= 50, progress: (s) => `${s.biodiversity}%/50%` },
+  { id: 'quiz_marathon', icon: '📚', title: 'Marathon Kuis', desc: 'Selesaikan 3 sesi kuis hari ini.', reward: 25000, rewardText: '+Rp 25.000', check: (s, ex) => ex && ex.quizSessionsToday >= 3, progress: (s, ex) => `${(ex && ex.quizSessionsToday) || 0}/3` },
+  { id: 'coral_guardian', icon: '🪸', title: 'Penjaga Karang', desc: 'Suhu air di bawah 29°C.', reward: 10000, rewardText: '+Rp 10.000', check: (s) => s.env.temp < 29, progress: (s) => `${s.env.temp.toFixed(1)}°C` }
+];
+
+const ACHIEVEMENTS = [
+  { id: 'first_quiz', icon: '📝', title: 'Langkah Pertama', desc: 'Selesaikan 1 sesi kuis', check: s => s.quizStats.total >= 5 },
+  { id: 'quiz_10', icon: '📚', title: 'Rajin Belajar', desc: 'Jawab 10 soal benar', check: s => s.quizStats.correct >= 10 },
+  { id: 'quiz_25', icon: '🎓', title: 'Cendekiawan Laut', desc: 'Jawab 25 soal benar', check: s => s.quizStats.correct >= 25 },
+  { id: 'quiz_50', icon: '🧠', title: 'Master Ekosistem', desc: 'Jawab 50 soal benar', check: s => s.quizStats.correct >= 50 },
+  { id: 'perfect', icon: '🎯', title: 'Sempurna!', desc: 'Skor 5/5 di satu sesi', check: s => s.hasPerfect },
+  { id: 'rich_100k', icon: '💰', title: 'Tabungan Emas', desc: 'Saldo ≥ Rp 100.000', check: s => s.coins >= 100000 },
+  { id: 'rich_500k', icon: '💎', title: 'Jutawan Muda', desc: 'Saldo ≥ Rp 500.000', check: s => s.coins >= 500000 },
+  { id: 'biodiv_50', icon: '🌊', title: 'Ekosistem Pulih', desc: 'Biodiversitas ≥ 50%', check: s => s.biodiversity >= 50 },
+  { id: 'all_trophic', icon: '🔗', title: 'Rantai Lengkap', desc: 'Semua trofik terisi', check: s => s.populations.prod > 0 && s.populations.herb > 0 && s.populations.carn > 0 && s.populations.apex > 0 },
+  { id: 'survive_30', icon: '🏆', title: 'Veteran', desc: 'Bertahan sampai Hari 30', check: s => s.day >= 30 }
+];
+
+const state = {
+  playerName: 'Penjaga Laut',
+  day: 1, energy: 100, score: 0, coins: 50000,
+  populations: { prod: 0, herb: 0, carn: 0, apex: 0 },
+  env: { temp: 26, ph: 8.1, oxygen: 80, turbidity: 15 },
+  sunlight: 1.0, pollution: 0, biodiversity: 0,
+  gameOver: false, log: [],
+  currentMission: 0, missionCompleted: [], history: [],
+  quizStats: { total: 0, correct: 0, wrong: 0 },
+  categoryStats: {}, quizPool: [], priceInflation: 1.0,
+  totalSpent: 0, totalEarned: 0, hasPerfect: false,
+  currentEvent: null, eventCompleted: false,
+  quizStreak: 0, perfectThisSession: false, quizSessionsToday: 0,
+  extra: { quizStreak: 0, perfectThisSession: false, quizSessionsToday: 0 }
+};
+
+const USERS_KEY = 'aquabalance_users_v13';
+const SAVE_PREFIX = 'aquabalance_save_v13_';
+const ACH_KEY = 'aquabalance_ach_v13_';
+function getRegisteredUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch(e) { return []; } }
+function registerUser(name) { const users = getRegisteredUsers(); if (!users.includes(name)) { users.push(name); localStorage.setItem(USERS_KEY, JSON.stringify(users)); } }
+function saveUserState() { if (!state.playerName) return; try { localStorage.setItem(SAVE_PREFIX + state.playerName, JSON.stringify(state)); } catch(e) {} }
+function loadUserState(name) { try { const data = localStorage.getItem(SAVE_PREFIX + name); return data ? JSON.parse(data) : null; } catch(e) { return null; } }
+function deleteUserState(name) { try { localStorage.removeItem(SAVE_PREFIX + name); const users = getRegisteredUsers().filter(u => u !== name); localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch(e) {} }
+function getUnlockedAch() { try { return JSON.parse(localStorage.getItem(ACH_KEY + state.playerName) || '[]'); } catch(e) { return []; } }
+function saveUnlockedAch(arr) { try { localStorage.setItem(ACH_KEY + state.playerName, JSON.stringify(arr)); } catch(e) {} }
+
+const logBox = document.getElementById('logBox');
+function addLog(msg, type='') {
+  state.log.unshift({ msg, type, day: state.day });
+  if (state.log.length > 30) state.log.pop();
+  const el = document.createElement('div');
+  el.className = 'logLine ' + type;
+  el.textContent = `[H${state.day}] ${msg}`;
+  logBox.prepend(el);
+  while (logBox.children.length > 4) logBox.removeChild(logBox.lastChild);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 6000);
+}
+function moneyBurst(amount) {
+  const el = document.createElement('div');
+  el.className = 'coinBurst';
+  el.textContent = `+${formatRupiah(amount)} 💰`;
+  document.getElementById('app').appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+  AudioEngine.playCoin();
+}
+
+const BASE_PRICES = { prod: 1000, herb: 5000, carn: 20000, apex: 80000 };
+function getPrice(levelId) { return Math.round((BASE_PRICES[levelId] || 0) * state.priceInflation); }
+function inflatePrices() { state.priceInflation = Math.min(50, state.priceInflation * 1.15); }
+function compactRp(n) { if (n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + 'jt'; if (n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'rb'; return n.toString(); }
+
+const modal = document.getElementById('modal');
+const modalTitle = document.getElementById('modalTitle');
+const modalText = document.getElementById('modalText');
+const modalBtn = document.getElementById('modalBtn');
+const modalBtn2 = document.getElementById('modalBtn2');
+const modalActions = document.getElementById('modalActions');
+function showModal(title, html, btnLabel='OK', cb=null, showCancel=false, cancelCb=null) {
+  AudioEngine.init(); AudioEngine.resume();
+  modalTitle.textContent = title;
+  modalText.innerHTML = html;
+  modalBtn.textContent = btnLabel;
+  modalBtn2.style.display = showCancel ? 'inline-block' : 'none';
+  modalActions.style.display = 'flex';
+  modal.classList.add('show');
+  modalBtn.onclick = () => { modal.classList.remove('show'); if (cb) cb(); };
+  modalBtn2.onclick = () => { modal.classList.remove('show'); if (cancelCb) cancelCb(); };
+}
+
+let audioEnabled = true;
+const audioToggleBtn = document.getElementById('audioToggle');
+if (audioToggleBtn) {
+  audioToggleBtn.addEventListener('click', () => {
+    AudioEngine.init();
+    audioEnabled = !audioEnabled;
+    AudioEngine.setMuted(!audioEnabled);
+    if (audioEnabled) {
+      audioToggleBtn.textContent = '🔊';
+      audioToggleBtn.classList.remove('muted');
+      AudioEngine.startMusic();
+    } else {
+      audioToggleBtn.textContent = '🔇';
+      audioToggleBtn.classList.add('muted');
+    }
+  });
+}
+
+function getCategoryStats() {
+  if (!state.categoryStats) state.categoryStats = {};
+  CATEGORIES.forEach(c => { if (!state.categoryStats[c.id]) state.categoryStats[c.id] = { total: 0, correct: 0 }; });
+  return state.categoryStats;
+}
+
+const QUIZ_REWARDS = { correct: 2000, wrong: 500, perfectBonus: 5000, streak3Bonus: 2500 };
+const QUESTIONS_PER_SESSION = 5;
+function shuffleArr(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function getQuizQuestions(cat, n) { let pool = QUIZ_BANK; if (cat && cat !== 'mixed') pool = QUIZ_BANK.filter(q => q.cat === cat); return shuffleArr(pool).slice(0, Math.min(n, pool.length)); }
+
+let quizSession = null;
+
+function showQuizMenu() {
+  const maxReward = QUESTIONS_PER_SESSION * QUIZ_REWARDS.correct + QUIZ_REWARDS.perfectBonus;
+  const catCards = CATEGORIES.map(c => {
+    const count = QUIZ_BANK.filter(q => q.cat === c.id).length;
+    const st = (state.categoryStats && state.categoryStats[c.id]) || { total: 0, correct: 0 };
+    const acc = st.total > 0 ? Math.round(st.correct / st.total * 100) : 0;
+    return `<div class="catCard" data-cat="${c.id}"><div class="cIcon">${c.icon}</div><div class="cName">${c.name}</div><div class="cCount">${count} soal${st.total > 0 ? ` • ${acc}%` : ''}</div></div>`;
+  }).join('');
+  const html = `<p class="center" style="font-size:11px;"><b>📝 Pilih Kategori Kuis</b></p><div class="catGrid">${catCards}</div><button class="modalBtn" id="btnMixed" style="width:100%;background:linear-gradient(180deg,#ffe680,#ffcc33);color:#7a5500;font-weight:800;padding:12px;margin-top:6px;">🎲 Campur Semua (${QUIZ_BANK.length} soal)</button><div style="margin-top:10px;padding:8px;background:#f0faff;border-radius:8px;text-align:left;font-size:9.5px;color:#2a6a8a;">✅ Benar: +${formatRupiah(QUIZ_REWARDS.correct)} • ❌ Salah: +${formatRupiah(QUIZ_REWARDS.wrong)}<br>💰 Maks: <b>${formatRupiah(maxReward)}</b></div>`;
+  showModal('📚 Menu Kuis', html, 'TUTUP');
+  setTimeout(() => {
+    modalText.querySelectorAll('.catCard').forEach(card => { card.onclick = () => { modal.classList.remove('show'); startQuizSession(card.dataset.cat); }; });
+    const btnMix = document.getElementById('btnMixed');
+    if (btnMix) btnMix.onclick = () => { modal.classList.remove('show'); startQuizSession('mixed'); };
+  }, 50);
+}
+function startQuizSession(cat) {
+  quizSession = { category: cat, questions: getQuizQuestions(cat, QUESTIONS_PER_SESSION), index: 0, correct: 0, wrong: 0, streak: 0, coinsEarned: 0, answers: [] };
+  state.perfectThisSession = false; state.extra.perfectThisSession = false;
+  renderQuizQuestion();
+}
+function renderQuizQuestion() {
+  if (!quizSession) return;
+  if (quizSession.index >= quizSession.questions.length) { finishQuizSession(); return; }
+  const q = quizSession.questions[quizSession.index];
+  const optionsHTML = q.o.map((opt, i) => `<button class="quizOpt" data-idx="${i}">${String.fromCharCode(65+i)}. ${opt}</button>`).join('');
+  const dots = quizSession.questions.map((_, i) => { let cls = 'dot'; if (i < quizSession.index) cls += quizSession.answers[i].correct ? ' correct' : ' wrong'; if (i === quizSession.index) cls += ' active'; return `<div class="${cls}"></div>`; }).join('');
+  const html = `<div class="quizHeader"><div><div class="qTitle">Soal ${quizSession.index + 1}/${quizSession.questions.length}</div><div class="qCat">📚 ${quizSession.category === 'mixed' ? 'Campur' : quizSession.category}</div></div><div class="qReward">💰 ${formatRupiah(quizSession.coinsEarned)}</div></div><div class="quizProgress">${dots}</div><div class="quizQuestion">${q.q}</div><div class="quizOptions">${optionsHTML}</div><div id="quizFeedback"></div>`;
+  modalTitle.textContent = '📝 Kuis';
+  modalText.innerHTML = html;
+  modalActions.style.display = 'none';
+  modal.classList.add('show');
+  setTimeout(() => { modalText.querySelectorAll('.quizOpt').forEach(btn => { btn.onclick = () => answerQuiz(parseInt(btn.dataset.idx)); }); }, 30);
+}
+function answerQuiz(idx) {
+  const q = quizSession.questions[quizSession.index];
+  const correctIdx = q.a;
+  const isCorrect = idx === correctIdx;
+  state.quizStats.total++;
+  getCategoryStats();
+  if (!state.categoryStats[q.cat]) state.categoryStats[q.cat] = { total: 0, correct: 0 };
+  state.categoryStats[q.cat].total++;
+  let reward;
+  if (isCorrect) {
+    state.quizStats.correct++;
+    state.categoryStats[q.cat].correct++;
+    quizSession.correct++;
+    quizSession.streak++;
+    state.quizStreak++;
+    state.extra.quizStreak = state.quizStreak;
+    reward = QUIZ_REWARDS.correct;
+    if (quizSession.streak === 3) reward += QUIZ_REWARDS.streak3Bonus;
+    AudioEngine.playCorrect();
+  } else {
+    state.quizStats.wrong++;
+    quizSession.wrong++;
+    quizSession.streak = 0;
+    state.quizStreak = 0;
+    state.extra.quizStreak = 0;
+    reward = QUIZ_REWARDS.wrong;
+    AudioEngine.playWrong();
+  }
+  quizSession.coinsEarned += reward;
+  quizSession.answers.push({ correct: isCorrect, cat: q.cat });
+  const opts = modalText.querySelectorAll('.quizOpt');
+  opts.forEach((btn, i) => { btn.classList.add('disabled'); if (i === correctIdx) btn.classList.add('correct'); else if (i === idx) btn.classList.add('wrong'); });
+  const feedback = document.getElementById('quizFeedback');
+  feedback.innerHTML = `<div class="quizFeedback ${isCorrect ? 'ok' : 'err'}">${isCorrect ? '✅ <b>Benar!</b>' : '❌ <b>Belum tepat.</b>'} +${formatRupiah(reward)}<br><span style="font-size:10px;font-weight:500;">💡 ${q.exp}</span></div><div style="text-align:center;margin-top:8px;"><button class="modalBtn" id="quizNext">${quizSession.index + 1 < quizSession.questions.length ? 'SOAL BERIKUTNYA →' : 'LIHAT HASIL 🏁'}</button></div>`;
+  document.getElementById('quizNext').onclick = () => { quizSession.index++; renderQuizQuestion(); };
+}
+function finishQuizSession() {
+  const qs = quizSession;
+  const perfect = qs.correct === qs.questions.length;
+  if (perfect) { qs.coinsEarned += QUIZ_REWARDS.perfectBonus; state.hasPerfect = true; state.perfectThisSession = true; state.extra.perfectThisSession = true; }
+  state.quizSessionsToday = (state.quizSessionsToday || 0) + 1;
+  state.extra.quizSessionsToday = state.quizSessionsToday;
+  state.coins += qs.coinsEarned;
+  state.totalEarned += qs.coinsEarned;
+  moneyBurst(qs.coinsEarned);
+  if (perfect) AudioEngine.playFanfare();
+  const accuracy = Math.round((qs.correct / qs.questions.length) * 100);
+  let grade = 'C', emoji = '😐';
+  if (accuracy === 100) { grade = 'S'; emoji = '🏆'; } else if (accuracy >= 80) { grade = 'A'; emoji = '🌟'; } else if (accuracy >= 60) { grade = 'B'; emoji = '👍'; } else if (accuracy >= 40) { grade = 'C'; emoji = '😐'; } else { grade = 'D'; emoji = '💪'; }
+  const catBreakdown = {};
+  qs.answers.forEach(a => { if (!catBreakdown[a.cat]) catBreakdown[a.cat] = { c: 0, t: 0 }; catBreakdown[a.cat].t++; if (a.correct) catBreakdown[a.cat].c++; });
+  let catHTML = '';
+  Object.entries(catBreakdown).forEach(([cat, v]) => { catHTML += `<div style="display:flex;justify-content:space-between;font-size:9.5px;color:#4a90b8;padding:2px 0;"><span>${cat}</span><span><b>${v.c}/${v.t}</b></span></div>`; });
+  const html = `<div style="text-align:center;"><div style="font-size:44px;margin-bottom:4px;">${emoji}</div><h2 style="color:#0088bb;margin-bottom:8px;">Hasil Kuis</h2><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;"><div style="background:#e6fff4;padding:7px;border-radius:8px;border:1.5px solid #00cc88;"><div style="font-size:8.5px;color:#007a52;font-weight:700;">BENAR</div><div style="font-size:17px;color:#00a878;font-weight:800;">${qs.correct}</div></div><div style="background:#ffe6ec;padding:7px;border-radius:8px;border:1.5px solid #ff4466;"><div style="font-size:8.5px;color:#a0103a;font-weight:700;">SALAH</div><div style="font-size:17px;color:#d1325a;font-weight:800;">${qs.wrong}</div></div><div style="background:#fff8d0;padding:7px;border-radius:8px;border:1.5px solid #d4a017;"><div style="font-size:8.5px;color:#7a5500;font-weight:700;">NILAI</div><div style="font-size:17px;color:#d4a017;font-weight:800;">${grade}</div></div></div>${catHTML ? `<div style="background:#f0faff;padding:8px;border-radius:8px;margin-bottom:10px;">${catHTML}</div>` : ''}<div style="background:linear-gradient(135deg,#fff8d0,#ffe680);padding:10px;border-radius:10px;border:2px solid #d4a017;margin-bottom:10px;"><div style="font-size:10.5px;color:#7a5500;font-weight:700;">💰 Saldo Didapat</div><div style="font-size:20px;color:#d4a017;font-weight:800;">+${formatRupiah(qs.coinsEarned)}</div>${perfect ? `<div style="font-size:9.5px;color:#00a878;font-weight:800;margin-top:4px;">✨ PERFECT +${formatRupiah(QUIZ_REWARDS.perfectBonus)} ✨</div>` : ''}</div><button class="modalBtn" id="quizDone">SELESAI</button></div>`;
+  modalTitle.textContent = '🏁 Hasil Kuis';
+  modalText.innerHTML = html;
+  modalActions.style.display = 'none';
+  modal.classList.add('show');
+  updateUI();
+  addLog(`📝 Kuis: ${qs.correct}/${qs.questions.length}, +${formatRupiah(qs.coinsEarned)}`, 'coin');
+  saveUserState();
+  document.getElementById('quizDone').onclick = () => { modal.classList.remove('show'); modalActions.style.display = 'flex'; quizSession = null; checkMission(); checkEvent(); checkAchievements(); };
+}
+
+function pickDailyEvent() {
+  let pool = EVENT_TYPES.filter(e => !state.currentEvent || e.id !== state.currentEvent.id);
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  state.currentEvent = chosen;
+  state.eventCompleted = false;
+  state.extra.quizStreak = 0; state.extra.perfectThisSession = false; state.extra.quizSessionsToday = 0;
+  state.quizSessionsToday = 0;
+  updateEventPanel();
+}
+function updateEventPanel() {
+  if (!state.currentEvent) return;
+  const e = state.currentEvent;
+  document.getElementById('eIcon').textContent = e.icon;
+  document.getElementById('eTitle').textContent = e.title;
+  document.getElementById('eDesc').textContent = state.eventCompleted ? '✅ Selesai! Reward sudah diterima.' : e.desc;
+  document.getElementById('eReward').textContent = e.rewardText;
+  const panel = document.getElementById('eventPanel');
+  if (state.eventCompleted) { panel.style.background = 'linear-gradient(135deg, #e6fff4, #ccffee)'; panel.style.borderColor = '#00cc88'; }
+  else { panel.style.background = 'linear-gradient(135deg, #fff4d0, #ffe8a0)'; panel.style.borderColor = '#e5a814'; }
+}
+function checkEvent() {
+  if (!state.currentEvent || state.eventCompleted) return;
+  const e = state.currentEvent;
+  if (e.check(state, state.extra)) {
+    state.eventCompleted = true;
+    state.coins += e.reward;
+    state.totalEarned += e.reward;
+    moneyBurst(e.reward);
+    AudioEngine.playFanfare();
+    addLog(`🎉 EVENT SELESAI: ${e.title}! +${formatRupiah(e.reward)}`, 'coin');
+    updateEventPanel();
+    setTimeout(() => { showModal('🎉 EVENT BERHASIL!', `<p class="center" style="font-size:30px;">${e.icon}</p><p class="center" style="font-size:13px;"><b>${e.title}</b></p><p class="center" style="font-size:10.5px;">${e.desc}</p><p class="center" style="color:#d4a017;font-weight:800;">+${formatRupiah(e.reward)}</p>`, 'LUAR BIASA!'); }, 500);
+    saveUserState();
+  }
+}
+function checkAchievements() {
+  const unlocked = getUnlockedAch();
+  ACHIEVEMENTS.forEach(a => {
+    if (!unlocked.includes(a.id) && a.check(state)) {
+      unlocked.push(a.id);
+      state.coins += 5000;
+      moneyBurst(5000);
+      AudioEngine.playFanfare();
+      addLog(`🎖️ ACHIEVEMENT: ${a.title}! +Rp 5.000`, 'coin');
+      setTimeout(() => { showModal('🎖️ ACHIEVEMENT BARU!', `<p class="center" style="font-size:30px;">${a.icon}</p><p class="center" style="font-size:13px;"><b>${a.title}</b></p><p class="center" style="font-size:10.5px;">${a.desc}</p><p class="center" style="color:#d4a017;font-weight:800;">+Rp 5.000 Bonus!</p>`, 'KEREN!'); }, 400);
+    }
+  });
+  saveUnlockedAch(unlocked);
+}
+
+const LB_KEY = 'aquabalance_lb_v13';
+function getLeaderboard() { try { return JSON.parse(localStorage.getItem(LB_KEY) || '[]'); } catch(e) { return []; } }
+function saveLeaderboard(lb) { try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch(e) {} }
+function submitScore() {
+  const lb = getLeaderboard();
+  const entry = { name: state.playerName, score: state.score, coins: state.coins, quiz: state.quizStats.correct, quizTotal: state.quizStats.total, day: state.day, date: new Date().toLocaleDateString('id-ID') };
+  const idx = lb.findIndex(e => e.name === state.playerName);
+  if (idx >= 0) { if (state.score > lb[idx].score) lb[idx] = entry; else lb[idx].date = entry.date; } else lb.push(entry);
+  lb.sort((a,b) => b.score - a.score);
+  saveLeaderboard(lb.slice(0, 50));
+}
+function showLeaderboard() {
+  const lb = getLeaderboard();
+  let html = '';
+  if (lb.length === 0) html = `<p class="center">Belum ada skor. Mainkan dulu!</p>`;
+  else {
+    html = '<div style="max-height:400px;overflow-y:auto;">';
+    lb.slice(0, 20).forEach((e, i) => {
+      let cls = 'rankRow', posIcon = i + 1;
+      if (i === 0) { cls += ' gold'; posIcon = '🥇'; } else if (i === 1) { cls += ' silver'; posIcon = '🥈'; } else if (i === 2) { cls += ' bronze'; posIcon = '🥉'; }
+      if (e.name === state.playerName) cls += ' me';
+      const acc = e.quizTotal > 0 ? Math.round(e.quiz / e.quizTotal * 100) : 0;
+      html += `<div class="${cls}"><div class="rankPos">${posIcon}</div><div class="rankName">${e.name}${e.name === state.playerName ? ' (Anda)' : ''}<small>H${e.day} • Kuis: ${e.quiz}/${e.quizTotal} (${acc}%)</small></div><div class="rankScore">${e.score}<small>${compactRp(e.coins)}</small></div></div>`;
+    });
+    html += '</div>';
+  }
+  showModal('🏆 Peringkat Kelas', html, 'TUTUP');
+}
+
+function showTeacherDashboard() {
+  const users = getRegisteredUsers();
+  const allSaves = users.map(u => { const data = loadUserState(u); return data ? { name: u, data } : null; }).filter(Boolean);
+  if (allSaves.length === 0) { showModal('👩‍🏫 Dashboard Guru', `<p class="center">Belum ada siswa terdaftar.</p>`, 'TUTUP'); return; }
+  const totalStudents = allSaves.length;
+  const totalCorrect = allSaves.reduce((s, x) => s + (x.data.quizStats?.correct || 0), 0);
+  const totalQuiz = allSaves.reduce((s, x) => s + (x.data.quizStats?.total || 0), 0);
+  const avgScore = Math.round(allSaves.reduce((s, x) => s + (x.data.score || 0), 0) / totalStudents);
+  const avgAcc = totalQuiz > 0 ? Math.round(totalCorrect / totalQuiz * 100) : 0;
+  const catStats = {};
+  CATEGORIES.forEach(c => catStats[c.id] = { total: 0, correct: 0 });
+  allSaves.forEach(s => {
+    const cs = s.data.categoryStats || {};
+    Object.entries(cs).forEach(([cat, v]) => { if (catStats[cat]) { catStats[cat].total += v.total || 0; catStats[cat].correct += v.correct || 0; } });
+  });
+  const sorted = allSaves.slice().sort((a,b) => (b.data.score || 0) - (a.data.score || 0));
+  let html = `<div class="teacherStats"><div class="tStat"><div class="tsVal">${totalStudents}</div><div class="tsLabel">Total Siswa</div></div><div class="tStat"><div class="tsVal">${avgScore}</div><div class="tsLabel">Skor Rata-rata</div></div><div class="tStat"><div class="tsVal">${totalQuiz}</div><div class="tsLabel">Soal Dijawab</div></div><div class="tStat"><div class="tsVal">${avgAcc}%</div><div class="tsLabel">Akurasi Kelas</div></div></div><p style="font-size:10.5px;margin:10px 0 5px;text-align:left;"><b>📚 Akurasi Per Kategori:</b></p>`;
+  CATEGORIES.forEach(c => {
+    const st = catStats[c.id];
+    const acc = st.total > 0 ? Math.round(st.correct / st.total * 100) : 0;
+    const barColor = acc >= 80 ? '#00cc88' : acc >= 60 ? '#ffaa00' : acc >= 40 ? '#ff8844' : '#ff4466';
+    html += `<div class="accuracyRow"><div class="accIcon">${c.icon}</div><div class="accInfo"><div class="accName">${c.name} <small style="color:#4a90b8;font-weight:500;">(${st.correct}/${st.total})</small></div><div class="accBar"><div style="width:${acc}%;background:${barColor}"></div></div></div><div class="accVal">${acc}%</div></div>`;
+  });
+  html += `<p style="font-size:10.5px;margin:12px 0 5px;text-align:left;"><b>🏆 Peringkat Siswa (Top ${Math.min(10, sorted.length)}):</b></p>`;
+  sorted.slice(0, 10).forEach((s, i) => {
+    const d = s.data;
+    const acc = d.quizStats.total > 0 ? Math.round(d.quizStats.correct / d.quizStats.total * 100) : 0;
+    html += `<div class="studentRow ${i === 0 ? 'top' : ''}"><div class="sRank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i+1}</div><div class="sInfo"><div class="sName">${s.name}</div><div class="sMeta">Hari ${d.day} • Kuis: ${d.quizStats.correct}/${d.quizStats.total} (${acc}%)</div></div><div class="sScore"><div class="sVal">${d.score}</div><div class="sSub">${compactRp(d.coins)}</div></div></div>`;
+  });
+  html += `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:12px;"><button class="modalBtn teacher" id="btnExportCSV">📤 Export CSV</button><button class="modalBtn secondary" id="btnResetAll" style="color:#d1325a;border-color:#ff8899;">🗑️ Hapus Semua Data</button></div>`;
+  showModal('👩‍🏫 Dashboard Guru', html, 'TUTUP');
+  setTimeout(() => {
+    const btnCsv = document.getElementById('btnExportCSV');
+    const btnReset = document.getElementById('btnResetAll');
+    if (btnCsv) btnCsv.onclick = () => exportToCSV(allSaves);
+    if (btnReset) btnReset.onclick = () => {
+      if (confirm('Yakin hapus SEMUA data siswa?')) {
+        users.forEach(u => deleteUserState(u));
+        localStorage.removeItem(LB_KEY);
+        modal.classList.remove('show');
+        location.reload();
+      }
+    };
+  }, 50);
+}
+
+function exportToCSV(allSaves) {
+  const headers = ['Nama', 'Skor', 'Hari', 'Saldo (Rp)', 'Biodiversitas (%)', 'Total Soal', 'Benar', 'Salah', 'Akurasi (%)',
+    ...CATEGORIES.map(c => `${c.name} Benar`), ...CATEGORIES.map(c => `${c.name} Total`), ...CATEGORIES.map(c => `${c.name} Akurasi (%)`)];
+  const rows = [headers];
+  allSaves.forEach(s => {
+    const d = s.data;
+    const quiz = d.quizStats || { total: 0, correct: 0, wrong: 0 };
+    const acc = quiz.total > 0 ? Math.round(quiz.correct / quiz.total * 100) : 0;
+    const cs = d.categoryStats || {};
+    const catBenar = CATEGORIES.map(c => (cs[c.id] && cs[c.id].correct) || 0);
+    const catTotal = CATEGORIES.map(c => (cs[c.id] && cs[c.id].total) || 0);
+    const catAcc = CATEGORIES.map((c, i) => { const t = catTotal[i]; const b = catBenar[i]; return t > 0 ? Math.round(b / t * 100) : 0; });
+    rows.push([s.name, d.score || 0, d.day || 0, d.coins || 0, d.biodiversity || 0, quiz.total, quiz.correct, quiz.wrong, acc, ...catBenar, ...catTotal, ...catAcc]);
+  });
+  const csv = rows.map(r => r.map(cell => { const str = String(cell); if (str.includes(',') || str.includes('"')) return '"' + str.replace(/"/g, '""') + '"'; return str; }).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `aquabalance_laporan_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showCodex(levelId) {
+  const c = CODEX[levelId];
+  if (!c) return;
+  const html = `<div class="codexHeader"><div class="codexIcon">${c.icon}</div><div class="codexTitle"><h2>${c.name}</h2><div class="latin">${c.latin}</div></div></div><div style="text-align:left;margin-bottom:6px;">${c.tags.map(t => `<span class="codexBadge">${t}</span>`).join('')}</div><div class="codexSection"><h4>📌 Peran</h4><p>${c.role}</p></div><div class="codexSection"><h4>🌊 Habitat</h4><p>${c.habitat}</p></div><div class="codexSection"><h4>📖 Deskripsi</h4><p>${c.desc}</p></div><div class="codexFact">💡 <b>Fakta:</b> ${c.fact}</div>`;
+  showModal('📖 Codex', html, 'TUTUP');
+}
+function showAllCodex() {
+  let html = '<p class="center" style="margin-bottom:8px;">Pilih level trofik:</p><div style="display:flex;flex-direction:column;gap:5px;">';
+  for (const key of Object.keys(CODEX)) {
+    const c = CODEX[key];
+    html += `<button class="modalBtn" style="text-align:left;background:linear-gradient(180deg,#eaf8ff,#c8e8ff);color:#01557a;padding:8px 10px;font-size:10.5px;font-weight:700;border:1.5px solid #7fc9ec;" data-codex="${key}"><span style="font-size:18px;margin-right:6px;">${c.icon}</span><span style="display:inline-block;vertical-align:middle;"><b>${c.name}</b></span></button>`;
+  }
+  html += `</div><p class="center" style="font-size:10px;margin-top:10px;">📚 Bank soal: <b>${QUIZ_BANK.length} soal</b></p>`;
+  showModal('📖 Codex Spesies', html, 'TUTUP');
+  setTimeout(() => { modalText.querySelectorAll('[data-codex]').forEach(btn => { btn.onclick = () => showCodex(btn.dataset.codex); }); }, 50);
+}
+
+const canvasWrap = document.getElementById('canvasWrap');
+const scene = new THREE.Scene();
+const bgCanvas = document.createElement('canvas');
+bgCanvas.width = 16; bgCanvas.height = 256;
+const bgCtx = bgCanvas.getContext('2d');
+const bgGrad = bgCtx.createLinearGradient(0, 0, 0, 256);
+bgGrad.addColorStop(0, '#a8ecff'); bgGrad.addColorStop(0.15, '#7dd8f5'); bgGrad.addColorStop(0.35, '#4db8e0');
+bgGrad.addColorStop(0.55, '#2a8fc4'); bgGrad.addColorStop(0.75, '#15668f'); bgGrad.addColorStop(1, '#0a3a55');
+bgCtx.fillStyle = bgGrad; bgCtx.fillRect(0, 0, 16, 256);
+const bgTex = new THREE.CanvasTexture(bgCanvas);
+bgTex.colorSpace = THREE.SRGBColorSpace;
+scene.background = bgTex;
+scene.fog = new THREE.FogExp2(0x2a8fc4, 0.022);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
+camera.position.set(0, 4, 14);
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+canvasWrap.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0x88c8e8, 0.9));
+const sunLight = new THREE.DirectionalLight(0xfff4d0, 2.0); sunLight.position.set(5, 30, 8); scene.add(sunLight);
+const fillLight = new THREE.DirectionalLight(0x8ad8ff, 0.7); fillLight.position.set(-10, 15, -8); scene.add(fillLight);
+const bottomLight = new THREE.PointLight(0x6eeeb0, 0.9, 45); bottomLight.position.set(0, 3, 0); scene.add(bottomLight);
+
+function buildSeabed() {
+  const geo = new THREE.CircleGeometry(10, 96, 0, Math.PI*2);
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const r = Math.sqrt(v.x*v.x + v.y*v.y);
+    const ripple = Math.sin(r * 3) * 0.02 + Math.sin(v.x * 2.5) * 0.015;
+    pos.setZ(i, ripple + (Math.random() - 0.5) * 0.015);
+  }
+  pos.needsUpdate = true; geo.computeVertexNormals();
+  const floor = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xf0d8a8, roughness: 0.95, emissive: 0xa88040, emissiveIntensity: 0.03 }));
+  floor.rotation.x = -Math.PI/2; scene.add(floor);
+  const gravelColors = [0xd8c090, 0xc8b080, 0xe0c8a0, 0xb8a070, 0xa89868];
+  for (let i = 0; i < 120; i++) {
+    const a = Math.random()*Math.PI*2; const r = 1 + Math.random()*9;
+    const size = 0.02 + Math.random()*0.05;
+    const g = new THREE.Mesh(new THREE.DodecahedronGeometry(size, 0), new THREE.MeshStandardMaterial({ color: gravelColors[Math.floor(Math.random()*5)], roughness: 1 }));
+    g.position.set(Math.cos(a)*r, size*0.3, Math.sin(a)*r); g.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3); scene.add(g);
+  }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(9.85, 10.15, 64), new THREE.MeshBasicMaterial({ color: 0x33c1ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  ring.rotation.x = -Math.PI/2; ring.position.y = 0.04; scene.add(ring);
+}
+buildSeabed();
+
+const coralObjects = [];
+function buildBranchingCoral(x, z, scale, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, emissive: color, emissiveIntensity: 0.08 });
+  const tipMat = new THREE.MeshStandardMaterial({ color: 0xfff0ff, roughness: 0.6, emissive: 0xff88bb, emissiveIntensity: 0.15 });
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.6, 8), mat); trunk.position.y = 0.3; g.add(trunk);
+  function addBranch(px, py, pz, dirX, dirZ, len, depth) {
+    if (depth <= 0) return;
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.07, len, 6), mat);
+    b.position.set(px + dirX*len/2, py + len/2, pz + dirZ*len/2);
+    b.lookAt(px + dirX*len, py + len, pz + dirZ*len); b.rotateX(Math.PI/2); g.add(b);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), tipMat);
+    tip.position.set(px + dirX*len, py + len, pz + dirZ*len); g.add(tip);
+    const nx = px + dirX*len, ny = py + len, nz = pz + dirZ*len;
+    for (let i = 0; i < 2; i++) { const ang = (Math.random() - 0.5) * Math.PI; addBranch(nx, ny, nz, Math.cos(ang)*0.4, Math.sin(ang)*0.4, len*0.7, depth-1); }
+  }
+  for (let i = 0; i < 3; i++) { const a = (i/3)*Math.PI*2 + Math.random()*0.5; addBranch(0, 0.5, 0, Math.cos(a)*0.4, Math.sin(a)*0.4, 0.4, 3); }
+  g.position.set(x, 0, z); g.scale.setScalar(scale); scene.add(g); return g;
+}
+function buildBrainCoral(x, z, scale, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, emissive: color, emissiveIntensity: 0.05 });
+  const geo = new THREE.SphereGeometry(0.5, 20, 14);
+  const pos = geo.attributes.position; const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const noise = Math.sin(v.x*8)*Math.cos(v.y*8)*Math.sin(v.z*8); const r = 1 + noise*0.08; pos.setXYZ(i, v.x*r, Math.max(0, v.y)*0.8*r, v.z*r); }
+  pos.needsUpdate = true; geo.computeVertexNormals();
+  const brain = new THREE.Mesh(geo, mat); brain.position.y = 0.4; g.add(brain);
+  g.position.set(x, 0, z); g.scale.setScalar(scale); scene.add(g); return g;
+}
+function buildFanCoral(x, z, scale, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.75, emissive: color, emissiveIntensity: 0.12, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+  for (let i = 0; i < 8; i++) {
+    const s = new THREE.Shape(); s.moveTo(0, 0);
+    const ang = (i - 4) * 0.18;
+    s.quadraticCurveTo(Math.sin(ang)*0.5, 0.6, Math.sin(ang)*0.7, 1.0);
+    s.quadraticCurveTo(Math.sin(ang)*0.4, 0.5, 0, 0);
+    const mesh = new THREE.Mesh(new THREE.ShapeGeometry(s), mat);
+    mesh.position.set(0, 0.2, 0); mesh.rotation.y = ang * 0.6; g.add(mesh);
+  }
+  g.position.set(x, 0, z); g.scale.setScalar(scale); scene.add(g); return g;
+}
+const coralData = [
+  { type: 'branch', color: 0xff5577 }, { type: 'branch', color: 0xff8855 }, { type: 'branch', color: 0xff77aa },
+  { type: 'brain', color: 0xffaa44 }, { type: 'brain', color: 0xffcc55 }, { type: 'fan', color: 0xcc44ff },
+  { type: 'fan', color: 0xaa66ff }, { type: 'branch', color: 0x44ffaa }, { type: 'brain', color: 0x66ddff },
+  { type: 'fan', color: 0xff6699 }, { type: 'branch', color: 0xffaa22 }, { type: 'brain', color: 0xff8844 }
+];
+coralData.forEach((c, i) => {
+  const a = (i / coralData.length) * Math.PI * 2 + Math.random() * 0.3;
+  const r = 4.5 + Math.random() * 4;
+  const x = Math.cos(a) * r, z = Math.sin(a) * r;
+  const sc = 0.8 + Math.random() * 0.6;
+  let c2;
+  if (c.type === 'branch') c2 = buildBranchingCoral(x, z, sc, c.color);
+  else if (c.type === 'brain') c2 = buildBrainCoral(x, z, sc, c.color);
+  else c2 = buildFanCoral(x, z, sc, c.color);
+  coralObjects.push(c2);
+});
+
+const allFlora = [];
+function buildSeagrass(x, z, height, color, segs) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.05 });
+  const segList = [];
+  for (let j = 0; j < segs; j++) {
+    const w = 0.18 - j * 0.015; const h = height / segs;
+    const seg = new THREE.Mesh(new THREE.PlaneGeometry(w, h, 1, 2), mat);
+    seg.position.y = h * 0.5 + j * h * 0.92; seg.rotation.y = Math.random() * Math.PI;
+    g.add(seg); segList.push(seg);
+  }
+  g.position.set(x, 0, z);
+  g.userData = { segs: segList, phase: Math.random()*Math.PI*2, swaySpeed: 0.8 + Math.random()*0.6, type: 'seagrass' };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildKelp(x, z, height, color) {
+  const g = new THREE.Group();
+  const stalkMat = new THREE.MeshStandardMaterial({ color: 0x2d8040, roughness: 0.75 });
+  const leafMat = new THREE.MeshStandardMaterial({ color, roughness: 0.7, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.06 });
+  const stalkSegs = [];
+  const numSegs = 6; const segH = height / numSegs;
+  for (let j = 0; j < numSegs; j++) {
+    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, segH, 6), stalkMat);
+    stalk.position.y = segH * 0.5 + j * segH * 0.95; g.add(stalk); stalkSegs.push(stalk);
+    for (let k = 0; k < 2; k++) {
+      const ls = new THREE.Shape(); ls.moveTo(0, 0);
+      ls.bezierCurveTo(0.15, 0.1, 0.25, 0.35, 0.05, 0.55);
+      ls.bezierCurveTo(-0.05, 0.35, -0.1, 0.15, 0, 0);
+      const leaf = new THREE.Mesh(new THREE.ShapeGeometry(ls), leafMat);
+      leaf.position.set(0, j*segH + segH*0.5, 0);
+      leaf.rotation.y = (k*Math.PI) + Math.random()*0.4; leaf.rotation.z = Math.random()*0.4 - 0.2;
+      g.add(leaf); stalkSegs.push(leaf);
+    }
+  }
+  g.position.set(x, 0, z);
+  g.userData = { segs: stalkSegs, phase: Math.random()*Math.PI*2, swaySpeed: 0.5 + Math.random()*0.5, type: 'kelp' };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildSeagrassClump(x, z, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.75, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.04 });
+  const blades = [];
+  const numBlades = 8 + Math.floor(Math.random()*6);
+  for (let i = 0; i < numBlades; i++) {
+    const h = 0.5 + Math.random()*0.5;
+    const blade = new THREE.Mesh(new THREE.PlaneGeometry(0.08, h, 1, 3), mat);
+    blade.position.set((Math.random()-0.5)*0.3, h*0.5, (Math.random()-0.5)*0.3);
+    blade.rotation.y = Math.random()*Math.PI*2; blade.rotation.z = (Math.random()-0.5)*0.3;
+    g.add(blade); blades.push(blade);
+  }
+  g.position.set(x, 0, z);
+  g.userData = { segs: blades, phase: Math.random()*Math.PI*2, swaySpeed: 0.7 + Math.random()*0.7, type: 'clump' };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildShortGrass(x, z, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.05 });
+  const blades = [];
+  for (let i = 0; i < 15; i++) {
+    const h = 0.15 + Math.random()*0.2;
+    const blade = new THREE.Mesh(new THREE.PlaneGeometry(0.06, h), mat);
+    blade.position.set((Math.random()-0.5)*0.5, h*0.5, (Math.random()-0.5)*0.5);
+    blade.rotation.y = Math.random()*Math.PI*2; blade.rotation.z = (Math.random()-0.5)*0.5;
+    g.add(blade); blades.push(blade);
+  }
+  g.position.set(x, 0, z);
+  g.userData = { segs: blades, phase: Math.random()*Math.PI*2, swaySpeed: 1.0 + Math.random()*0.8, type: 'shortgrass' };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildCaulerpa(x, z, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7, emissive: color, emissiveIntensity: 0.08 });
+  const parts = [];
+  const numStems = 4 + Math.floor(Math.random()*3);
+  for (let i = 0; i < numStems; i++) {
+    const stemH = 0.3 + Math.random()*0.35;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, stemH, 5), mat);
+    const angle = (i/numStems)*Math.PI*2 + Math.random()*0.5;
+    const r = 0.1 + Math.random()*0.15;
+    stem.position.set(Math.cos(angle)*r, stemH*0.5, Math.sin(angle)*r);
+    stem.rotation.z = Math.cos(angle)*0.2; stem.rotation.x = Math.sin(angle)*0.2;
+    g.add(stem); parts.push(stem);
+    for (let j = 0; j < 3; j++) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.05 + Math.random()*0.03, 6, 5), mat);
+      leaf.position.set(Math.cos(angle)*r + (Math.random()-0.5)*0.1, stemH + Math.random()*0.15, Math.sin(angle)*r + (Math.random()-0.5)*0.1);
+      leaf.scale.set(1, 1.2, 1); g.add(leaf); parts.push(leaf);
+    }
+  }
+  g.position.set(x, 0, z);
+  g.userData = { segs: parts, phase: Math.random()*Math.PI*2, swaySpeed: 0.6 + Math.random()*0.5, type: 'caulerpa' };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildRedAlgae(x, z) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xc04070, roughness: 0.75, emissive: 0xa02050, emissiveIntensity: 0.15 });
+  const parts = [];
+  const numStems = 5 + Math.floor(Math.random()*4);
+  for (let i = 0; i < numStems; i++) {
+    const h = 0.3 + Math.random()*0.3;
+    const angle = (i/numStems)*Math.PI*2;
+    const r = Math.random()*0.15;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, h, 5), mat);
+    stem.position.set(Math.cos(angle)*r, h*0.5, Math.sin(angle)*r);
+    stem.rotation.z = (Math.random()-0.5)*0.4; stem.rotation.x = (Math.random()-0.5)*0.4;
+    g.add(stem); parts.push(stem);
+    for (let j = 0; j < 2; j++) {
+      const br = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.015, h*0.5, 4), mat);
+      br.position.set(Math.cos(angle)*r + (Math.random()-0.5)*0.1, h*0.7, Math.sin(angle)*r + (Math.random()-0.5)*0.1);
+      br.rotation.z = (Math.random()-0.5)*0.8; br.rotation.x = (Math.random()-0.5)*0.8;
+      g.add(br); parts.push(br);
+    }
+  }
+  g.position.set(x, 0, z);
+  g.userData = { segs: parts, phase: Math.random()*Math.PI*2, swaySpeed: 0.65 + Math.random()*0.5, type: 'redalgae' };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildSponge(x, z, color) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, emissive: color, emissiveIntensity: 0.1 });
+  const numTubes = 1 + Math.floor(Math.random()*3);
+  for (let i = 0; i < numTubes; i++) {
+    const h = 0.3 + Math.random()*0.5;
+    const r = 0.1 + Math.random()*0.08;
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(r, r*1.3, h, 10, 1, true), mat.clone());
+    tube.material.side = THREE.DoubleSide;
+    tube.position.set((Math.random()-0.5)*0.3, h*0.5, (Math.random()-0.5)*0.3);
+    g.add(tube);
+    const top = new THREE.Mesh(new THREE.TorusGeometry(r, r*0.15, 6, 16), mat);
+    top.position.copy(tube.position); top.position.y = h; top.rotation.x = Math.PI/2; g.add(top);
+  }
+  g.position.set(x, 0, z);
+  g.userData = { type: 'sponge', phase: Math.random()*Math.PI*2, segs: [] };
+  scene.add(g); allFlora.push(g); return g;
+}
+function buildSeaUrchin(x, z) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a1a3a, roughness: 0.9, emissive: 0x4a2a6a, emissiveIntensity: 0.2 });
+  const spikeMat = new THREE.MeshStandardMaterial({ color: 0x1a0a2a, roughness: 0.7, metalness: 0.2 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), bodyMat); body.position.y = 0.15; g.add(body);
+  for (let i = 0; i < 20; i++) {
+    const theta = Math.acos(2*Math.random() - 1); const phi = Math.random()*Math.PI*2;
+    const spikeLen = 0.15 + Math.random()*0.1;
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.012, spikeLen, 4), spikeMat);
+    const dx = Math.sin(theta)*Math.cos(phi), dy = Math.cos(theta), dz = Math.sin(theta)*Math.sin(phi);
+    spike.position.set(dx*0.15, 0.15 + dy*0.15, dz*0.15);
+    spike.lookAt(dx*0.5, 0.15 + dy*0.5, dz*0.5); spike.rotateX(Math.PI/2); g.add(spike);
+  }
+  g.position.set(x, 0, z);
+  g.userData = { type: 'urchin', phase: Math.random()*Math.PI*2, segs: [] };
+  scene.add(g); allFlora.push(g); return g;
+}
+const seagrassColors = [0x3dcc66, 0x22aa44, 0x55ee88, 0x33bb55, 0x44dd77];
+const kelpColors = [0x2a9a4a, 0x40bb5a, 0x227a3a, 0x3aaa52];
+const caulerpaColors = [0x50dd70, 0x66ee88, 0x40bb60];
+const spongeColors = [0xff8060, 0xffaa70, 0xdd6655, 0xff9977, 0xcc7744];
+for (let i = 0; i < 25; i++) { const a = Math.random()*Math.PI*2; const r = 1.5 + Math.random()*8.3; buildSeagrass(Math.cos(a)*r, Math.sin(a)*r, 0.7 + Math.random()*0.8, seagrassColors[Math.floor(Math.random()*5)], 4 + Math.floor(Math.random()*3)); }
+for (let i = 0; i < 10; i++) { const a = Math.random()*Math.PI*2; const r = 6 + Math.random()*3.5; buildKelp(Math.cos(a)*r, Math.sin(a)*r, 1.8 + Math.random()*1.2, kelpColors[Math.floor(Math.random()*4)]); }
+for (let i = 0; i < 15; i++) { const a = Math.random()*Math.PI*2; const r = 2 + Math.random()*7.5; buildSeagrassClump(Math.cos(a)*r, Math.sin(a)*r, seagrassColors[Math.floor(Math.random()*5)]); }
+for (let i = 0; i < 20; i++) { const a = Math.random()*Math.PI*2; const r = 1 + Math.random()*8.8; buildShortGrass(Math.cos(a)*r, Math.sin(a)*r, seagrassColors[Math.floor(Math.random()*5)]); }
+for (let i = 0; i < 12; i++) { const a = Math.random()*Math.PI*2; const r = 2.5 + Math.random()*6.5; buildCaulerpa(Math.cos(a)*r, Math.sin(a)*r, caulerpaColors[Math.floor(Math.random()*3)]); }
+for (let i = 0; i < 10; i++) { const a = Math.random()*Math.PI*2; const r = 2 + Math.random()*7.5; buildRedAlgae(Math.cos(a)*r, Math.sin(a)*r); }
+for (let i = 0; i < 8; i++) { const a = Math.random()*Math.PI*2; const r = 3 + Math.random()*6.5; buildSponge(Math.cos(a)*r, Math.sin(a)*r, spongeColors[Math.floor(Math.random()*5)]); }
+for (let i = 0; i < 6; i++) { const a = Math.random()*Math.PI*2; const r = 3.5 + Math.random()*6; buildSeaUrchin(Math.cos(a)*r, Math.sin(a)*r); }
+
+const godRaysGroup = new THREE.Group(); scene.add(godRaysGroup);
+const godRays = [];
+const rayCanvas = document.createElement('canvas');
+rayCanvas.width = 32; rayCanvas.height = 256;
+const rayCtx = rayCanvas.getContext('2d');
+const rayGrad = rayCtx.createLinearGradient(0, 0, 0, 256);
+rayGrad.addColorStop(0, 'rgba(255, 248, 220, 0.9)');
+rayGrad.addColorStop(0.3, 'rgba(200, 240, 255, 0.6)');
+rayGrad.addColorStop(0.7, 'rgba(150, 220, 255, 0.25)');
+rayGrad.addColorStop(1, 'rgba(100, 200, 240, 0)');
+rayCtx.fillStyle = rayGrad; rayCtx.fillRect(0, 0, 32, 256);
+const rayTex = new THREE.CanvasTexture(rayCanvas);
+for (let i = 0; i < 12; i++) {
+  const w = 0.6 + Math.random()*1.8; const h = 16 + Math.random()*4;
+  const geo = new THREE.PlaneGeometry(w, h);
+  const mat = new THREE.MeshBasicMaterial({ map: rayTex, transparent: true, opacity: 0.12 + Math.random()*0.15, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+  const ray = new THREE.Mesh(geo, mat);
+  ray.position.set((Math.random()-0.5)*18, h/2 + 3, (Math.random()-0.5)*18);
+  ray.rotation.x = -Math.PI/2; ray.rotation.z = Math.random()*Math.PI;
+  ray.userData.baseOpacity = mat.opacity;
+  ray.userData.speed = 0.15 + Math.random()*0.4;
+  ray.userData.phase = Math.random()*Math.PI*2;
+  ray.userData.swaySpeed = 0.2 + Math.random()*0.3;
+  ray.userData.baseRotZ = ray.rotation.z;
+  godRaysGroup.add(ray); godRays.push(ray);
+}
+
+function buildCausticTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 300; i++) {
+    const x = Math.random()*512, y = Math.random()*512, r = 6 + Math.random()*25;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(180, 240, 255, 0.7)');
+    g.addColorStop(0.5, 'rgba(120, 220, 255, 0.35)');
+    g.addColorStop(1, 'rgba(80, 200, 255, 0)');
+    ctx.fillStyle = g; ctx.fillRect(x-r, y-r, r*2, r*2);
+  }
+  return canvas;
+}
+const causticCanvas = buildCausticTexture();
+const causticTex = new THREE.CanvasTexture(causticCanvas);
+causticTex.wrapS = causticTex.wrapT = THREE.RepeatWrapping; causticTex.repeat.set(3, 3);
+const causticMat = new THREE.MeshBasicMaterial({ map: causticTex, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false });
+const causticMesh = new THREE.Mesh(new THREE.CircleGeometry(9.8, 64), causticMat);
+causticMesh.rotation.x = -Math.PI/2; causticMesh.position.y = 0.06; scene.add(causticMesh);
+const causticTex2 = new THREE.CanvasTexture(causticCanvas);
+causticTex2.wrapS = causticTex2.wrapT = THREE.RepeatWrapping; causticTex2.repeat.set(5, 5);
+const causticMat2 = new THREE.MeshBasicMaterial({ map: causticTex2, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false });
+const causticMesh2 = new THREE.Mesh(new THREE.CircleGeometry(9.8, 64), causticMat2);
+causticMesh2.rotation.x = -Math.PI/2; causticMesh2.position.y = 0.07; scene.add(causticMesh2);
+
+const bubbles = [];
+const bubbleGeos = [new THREE.SphereGeometry(0.04, 8, 8), new THREE.SphereGeometry(0.07, 8, 8), new THREE.SphereGeometry(0.11, 8, 8)];
+for (let i = 0; i < 90; i++) {
+  const geo = bubbleGeos[Math.floor(Math.random()*3)];
+  const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, transmission: 0.9, ior: 1.33, emissive: 0xaaddff, emissiveIntensity: 0.15 });
+  const b = new THREE.Mesh(geo, mat);
+  b.position.set((Math.random()-0.5)*18, Math.random()*8, (Math.random()-0.5)*18);
+  b.userData.speed = 0.008 + Math.random()*0.025;
+  b.userData.wobblePhase = Math.random()*Math.PI*2;
+  b.userData.wobbleAmp = 0.01 + Math.random()*0.02;
+  scene.add(b); bubbles.push(b);
+}
+const plankton = [];
+for (let i = 0; i < 180; i++) {
+  const color = Math.random() > 0.7 ? 0x88ffcc : (Math.random() > 0.5 ? 0xffffff : 0xffeeaa);
+  const p = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4 + Math.random()*0.4 }));
+  p.position.set((Math.random()-0.5)*18, Math.random()*9, (Math.random()-0.5)*18);
+  p.userData.phase = Math.random()*Math.PI*2;
+  p.userData.speed = 0.05 + Math.random()*0.15;
+  p.userData.drift = Math.random()*0.02 - 0.01;
+  scene.add(p); plankton.push(p);
+}
+
+function makeFishBody(L, H, W, profileFn) {
+  const geo = new THREE.SphereGeometry(1, 24, 16);
+  const pos = geo.attributes.position; const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const t = (v.x + 1) / 2; const [hy, wy] = profileFn(t); pos.setXYZ(i, v.x * L, v.y * hy, v.z * wy); }
+  pos.needsUpdate = true; geo.computeVertexNormals(); return geo;
+}
+function createDetailedFish(cfg) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: cfg.color, roughness: 0.35, metalness: 0.1, emissive: cfg.color, emissiveIntensity: 0.08 });
+  const bellyMat = new THREE.MeshStandardMaterial({ color: cfg.belly || 0xffffff, roughness: 0.5 });
+  const finMat = new THREE.MeshStandardMaterial({ color: cfg.fin || cfg.color, roughness: 0.5, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+  const L = cfg.bodyLength, H = cfg.bodyHeight, W = cfg.bodyWidth;
+  const profileFn = (t) => [Math.sin(t * Math.PI) * H * 0.5 + 0.02, Math.sin(t * Math.PI) * W * 0.5 + 0.015];
+  const body = new THREE.Mesh(makeFishBody(L, 1, 1, profileFn), bodyMat); g.add(body);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI*2, Math.PI*0.55, Math.PI*0.45), bellyMat);
+  belly.scale.set(L*0.75, H*0.95, W*0.95); belly.position.set(L*0.1, -H*0.08, 0); g.add(belly);
+  const eyeSize = H*0.15;
+  [-1, 1].forEach(side => {
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(eyeSize, 10, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 }));
+    ew.position.set(L*0.75, H*0.12, side*W*0.42); ew.scale.set(0.7, 1, 1); g.add(ew);
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(eyeSize*0.65, 10, 10), new THREE.MeshStandardMaterial({ color: cfg.eyeColor || 0x000000, roughness: 0.2 }));
+    iris.position.set(L*0.75 + eyeSize*0.4, H*0.12, side*(W*0.42 + eyeSize*0.25)); g.add(iris);
+  });
+  const tailShape = new THREE.Shape();
+  tailShape.moveTo(0, 0);
+  tailShape.quadraticCurveTo(-0.15, H*0.5, -0.28, H*0.65);
+  tailShape.lineTo(-0.2, 0); tailShape.lineTo(-0.28, -H*0.65);
+  tailShape.quadraticCurveTo(-0.15, -H*0.5, 0, 0);
+  const tail = new THREE.Mesh(new THREE.ShapeGeometry(tailShape), finMat);
+  tail.position.set(-L*1.0, 0, 0); tail.rotation.x = -Math.PI/2; tail.rotation.z = Math.PI/2; g.add(tail);
+  const dorsalShape = new THREE.Shape();
+  dorsalShape.moveTo(0, 0);
+  dorsalShape.quadraticCurveTo(L*0.2, H*0.65, L*0.5, H*0.55);
+  dorsalShape.quadraticCurveTo(L*0.65, H*0.3, L*0.7, 0); dorsalShape.lineTo(0, 0);
+  const dorsal = new THREE.Mesh(new THREE.ShapeGeometry(dorsalShape), finMat);
+  dorsal.position.set(-L*0.35, H*0.42, 0); dorsal.rotation.y = Math.PI/2; dorsal.rotation.x = -Math.PI/2; dorsal.rotation.z = Math.PI/2; g.add(dorsal);
+  [-1, 1].forEach(side => {
+    const ps = new THREE.Shape();
+    ps.moveTo(0, 0);
+    ps.quadraticCurveTo(0.1, -H*0.3, 0.15, -H*0.5);
+    ps.quadraticCurveTo(0.05, -H*0.35, 0, 0);
+    const p = new THREE.Mesh(new THREE.ShapeGeometry(ps), finMat);
+    p.position.set(L*0.35, -H*0.05, side*W*0.4);
+    p.rotation.y = side*Math.PI/2; p.rotation.x = Math.PI*0.5; g.add(p);
+  });
+  g.userData.tail = tail;
+  return g;
+}
+function createHerbivoreFish() { return createDetailedFish({ bodyLength: 0.55, bodyHeight: 0.32, bodyWidth: 0.1, color: 0xffbb22, belly: 0xfff5cc, fin: 0xff8800, eyeColor: 0x000000 }); }
+function createCarnivoreFish() { return createDetailedFish({ bodyLength: 0.9, bodyHeight: 0.32, bodyWidth: 0.14, color: 0xd94f4f, belly: 0xffe0d0, fin: 0xb83333, eyeColor: 0xffcc00 }); }
+function createSharkFish() { return createDetailedFish({ bodyLength: 1.5, bodyHeight: 0.38, bodyWidth: 0.3, color: 0x8aa0b8, belly: 0xf0f8ff, fin: 0x6a8098, eyeColor: 0x000000 }); }
+function createPhytoplankton() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x44ee88, emissive: 0x22ff88, emissiveIntensity: 0.6, roughness: 0.4 });
+  const mat2 = new THREE.MeshStandardMaterial({ color: 0x88ffaa, emissive: 0x66ffaa, emissiveIntensity: 0.7, roughness: 0.3 });
+  for (let i = 0; i < 5; i++) {
+    const size = 0.05 + Math.random()*0.04;
+    const s = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 8), i % 2 ? mat2 : mat);
+    s.position.set((Math.random()-0.5)*0.18, (Math.random()-0.5)*0.18, (Math.random()-0.5)*0.18); g.add(s);
+  }
+  return g;
+}
+
+const TROPHIC_LEVELS = [
+  { id:'prod', name:'Fitoplankton', icon:'🟢', color:'#00cc88', max:200, baseCost:1 },
+  { id:'herb', name:'Ikan Herbivora', icon:'🐠', color:'#0088bb', max:120, baseCost:5 },
+  { id:'carn', name:'Ikan Karnivora', icon:'🐡', color:'#e58a00', max:60, baseCost:20 },
+  { id:'apex', name:'Hiu Apex', icon:'🦈', color:'#d1325a', max:20, baseCost:80 }
+];
+const fishMeshes = { prod: [], herb: [], carn: [], apex: [] };
+function createFishMesh(levelId) {
+  let mesh;
+  if (levelId === 'prod') mesh = createPhytoplankton();
+  else if (levelId === 'herb') mesh = createHerbivoreFish();
+  else if (levelId === 'carn') mesh = createCarnivoreFish();
+  else mesh = createSharkFish();
+  const isApex = levelId === 'apex';
+  mesh.userData.levelId = levelId;
+  mesh.userData.angle = Math.random()*Math.PI*2;
+  mesh.userData.orbitR = isApex ? 5 + Math.random()*3 : 2 + Math.random()*5;
+  mesh.userData.yBase = isApex ? 2.8 + Math.random()*1.2 : 1.2 + Math.random()*3;
+  mesh.userData.ySpeed = 0.5 + Math.random()*1;
+  mesh.userData.yPhase = Math.random()*Math.PI*2;
+  mesh.userData.speed = isApex ? 0.15 : 0.22 + Math.random()*0.2;
+  mesh.userData.wobble = Math.random()*Math.PI*2;
+  scene.add(mesh); return mesh;
+}
+function syncFishMeshes() {
+  for (const lvl of TROPHIC_LEVELS) {
+    const target = Math.min(state.populations[lvl.id], 20);
+    const arr = fishMeshes[lvl.id];
+    while (arr.length < target) arr.push(createFishMesh(lvl.id));
+    while (arr.length > target) { const m = arr.pop(); scene.remove(m); m.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  }
+}
+
+function calcBiodiversity() {
+  let filled = 0;
+  for (const lvl of TROPHIC_LEVELS) if (state.populations[lvl.id] > 0) filled++;
+  const popRatio = TROPHIC_LEVELS.reduce((s,l) => s + Math.min(state.populations[l.id]/l.max, 1), 0) / 4;
+  state.biodiversity = Math.round((filled/4)*60 + popRatio*40);
+}
+function updatePopulations() {
+  const envFactor = Math.max(0.3, 1.0 - state.pollution * 0.5 - state.env.turbidity * 0.005);
+  for (const lvl of TROPHIC_LEVELS) {
+    const pop = state.populations[lvl.id];
+    if (pop <= 0) continue;
+    const growth = Math.floor((Math.random() - 0.4) * pop * 0.1 * envFactor);
+    state.populations[lvl.id] = Math.max(0, Math.min(lvl.max, pop + growth));
+  }
+  calcBiodiversity();
+}
+function updateEnvironment() {
+  state.env.temp = Math.max(18, Math.min(36, state.env.temp + (state.pollution * 0.15) + (Math.random()-0.5)*0.2));
+  state.env.ph = Math.max(6.5, Math.min(9.0, state.env.ph - state.pollution * 0.02 + (Math.random()-0.5)*0.04));
+  state.env.oxygen = Math.max(10, Math.min(120, state.env.oxygen + state.populations.prod * 0.1 - 0.5));
+  state.env.turbidity = Math.max(0, Math.min(100, state.env.turbidity + state.pollution * 0.5 - state.populations.prod * 0.02));
+  state.sunlight = Math.max(0.15, 1.0 - state.env.turbidity * 0.006);
+  state.pollution = Math.max(0, state.pollution * 0.97);
+}
+const DISASTERS = [
+  { name: '🌊 Mikroplastik', desc: 'Polusi +30%!', apply(){ state.pollution = Math.min(1, state.pollution + 0.3); } },
+  { name: '🪸 Coral Bleaching', desc: 'Suhu naik!', apply(){ state.env.temp += 2.5; } },
+  { name: '🦠 Red Tide', desc: 'Oksigen turun!', apply(){ state.env.oxygen = Math.max(10, state.env.oxygen - 25); } },
+  { name: '🧪 Hujan Asam', desc: 'pH turun!', apply(){ state.env.ph = Math.max(6.5, state.env.ph - 0.5); } }
+];
+function rollDisaster() {
+  if (state.day < 3) return;
+  const chance = 0.15 + state.pollution * 0.22;
+  if (Math.random() < chance) {
+    const d = DISASTERS[Math.floor(Math.random() * DISASTERS.length)];
+    d.apply();
+    showEventBanner(d.name, d.desc);
+    AudioEngine.playAlert();
+    addLog(`BENCANA: ${d.name}`, 'bad');
+  }
+}
+const eventBanner = document.getElementById('eventBanner');
+const eventTitleEl = document.getElementById('eventTitle');
+const eventDescEl = document.getElementById('eventDesc');
+function showEventBanner(title, desc) {
+  eventTitleEl.textContent = title;
+  eventDescEl.textContent = desc;
+  eventBanner.classList.add('show');
+  setTimeout(() => eventBanner.classList.remove('show'), 2600);
+}
+function recordHistory() {
+  state.history.push({ day: state.day, prod: state.populations.prod, herb: state.populations.herb, carn: state.populations.carn, apex: state.populations.apex });
+  if (state.history.length > 60) state.history.shift();
+}
+const mIcon = document.getElementById('mIcon');
+const mTitle = document.getElementById('mTitle');
+const mDesc = document.getElementById('mDesc');
+const mProg = document.getElementById('mProg');
+const missionPanel = document.getElementById('missionPanel');
+function updateMission() {
+  if (state.currentMission >= MISSIONS.length) {
+    mIcon.textContent = '🏅'; mTitle.textContent = 'Semua Misi Selesai!';
+    mDesc.textContent = 'Anda telah menyelesaikan seluruh pembelajaran.';
+    mProg.textContent = '✓'; missionPanel.classList.add('complete'); return;
+  }
+  const m = MISSIONS[state.currentMission];
+  mIcon.textContent = m.icon; mTitle.textContent = m.title; mDesc.textContent = m.desc; mProg.textContent = m.progress(state);
+  if (m.check(state)) missionPanel.classList.add('complete'); else missionPanel.classList.remove('complete');
+}
+function checkMission() {
+  if (state.currentMission >= MISSIONS.length) return;
+  const m = MISSIONS[state.currentMission];
+  if (m.check(state)) {
+    state.missionCompleted.push(m.id);
+    state.energy += m.reward; state.score += m.reward;
+    state.coins += m.rewardRp; state.totalEarned += m.rewardRp;
+    moneyBurst(m.rewardRp);
+    AudioEngine.playFanfare();
+    addLog(`✅ MISI: ${m.title}`, 'good');
+    setTimeout(() => { showModal(`✅ ${m.title}`, `<p class="center" style="font-size:11.5px;"><b>🎓 Pembelajaran:</b><br>${m.learn}</p><p class="center" style="color:#00a878;font-weight:800;">+${m.reward}⚡ +${formatRupiah(m.rewardRp)} 💰</p>`, 'LANJUT', () => { state.currentMission++; updateMission(); }); }, 400);
+    saveUserState();
+  }
+}
+function nextDay() {
+  if (state.gameOver) return;
+  state.day++;
+  updateEnvironment(); updatePopulations(); rollDisaster(); recordHistory();
+  inflatePrices();
+  state.energy = Math.min(999, state.energy + Math.floor(5 + state.biodiversity * 0.2));
+  state.score += Math.floor(state.biodiversity * 0.5 + state.populations.prod*0.05);
+  checkMission(); checkAchievements();
+  pickDailyEvent();
+  if (state.biodiversity >= 80 && state.populations.apex > 0 && state.day > 15) {
+    state.gameOver = true;
+    submitScore(); saveUserState();
+    AudioEngine.playVictory();
+    showModal('🏆 KEMENANGAN!', `<p class="center">Anda berhasil memulihkan ekosistem laut!<br><br>Hari: ${state.day}<br>Biodiversitas: ${state.biodiversity}%<br>Skor: ${state.score}</p>`, 'MAIN LAGI', () => resetGame());
+  }
+  updateUI(); saveUserState();
+}
+function actionPhotosyn() {
+  if (state.energy < 15) { addLog('Energi tidak cukup!', 'bad'); return; }
+  state.energy -= 15;
+  state.sunlight = Math.min(1.5, state.sunlight + 0.3);
+  state.env.turbidity = Math.max(0, state.env.turbidity - 15);
+  addLog('Sinar matahari ditingkatkan.', 'good');
+  nextDay();
+}
+function actionFilter() {
+  if (state.energy < 25) { addLog('Energi tidak cukup!', 'bad'); return; }
+  state.energy -= 25;
+  state.pollution = Math.max(0, state.pollution - 0.35);
+  state.env.turbidity = Math.max(0, state.env.turbidity - 25);
+  state.env.ph = Math.min(8.4, state.env.ph + 0.2);
+  addLog('Filter air aktif.', 'good');
+  nextDay();
+}
+function actionRestock() {
+  if (state.energy < 20) { addLog('Energi tidak cukup!', 'bad'); return; }
+  state.energy -= 20;
+  state.populations.prod = Math.min(TROPHIC_LEVELS[0].max, state.populations.prod + 10);
+  state.populations.herb = Math.min(TROPHIC_LEVELS[1].max, state.populations.herb + 3);
+  addLog('Restock berhasil.', 'good');
+  nextDay();
+}
+function resetGame() {
+  state.day = 1; state.energy = 100; state.score = 0; state.coins = 50000;
+  state.populations = { prod: 10, herb: 4, carn: 1, apex: 0 };
+  state.env = { temp: 26, ph: 8.1, oxygen: 80, turbidity: 15 };
+  state.sunlight = 1.0; state.pollution = 0; state.biodiversity = 0;
+  state.gameOver = false; state.log = [];
+  state.currentMission = 0; state.missionCompleted = []; state.history = [];
+  state.quizStats = { total: 0, correct: 0, wrong: 0 };
+  state.categoryStats = {};
+  state.quizPool = []; state.priceInflation = 1.0;
+  state.totalSpent = 0; state.totalEarned = 0; state.hasPerfect = false;
+  state.currentEvent = null; state.eventCompleted = false;
+  state.quizStreak = 0; state.quizSessionsToday = 0;
+  state.extra = { quizStreak: 0, perfectThisSession: false, quizSessionsToday: 0 };
+  logBox.innerHTML = '';
+  syncFishMeshes(); calcBiodiversity(); recordHistory();
+  pickDailyEvent();
+  updateUI(); updateMission();
+  addLog('Kubah direset.', '');
+  saveUserState();
+}
+
+const levelsContainer = document.getElementById('levelsContainer');
+function buildLevelUI() {
+  levelsContainer.innerHTML = '';
+  TROPHIC_LEVELS.forEach(lvl => {
+    const row = document.createElement('div');
+    row.className = 'levelRow'; row.dataset.lvl = lvl.id;
+    row.innerHTML = `<div class="levelIcon">${lvl.icon}</div><div class="levelInfo"><div class="levelName">${lvl.name} <span style="color:#d1325a;font-size:8px;" id="price_${lvl.id}">${compactRp(getPrice(lvl.id))}</span></div><div class="levelBar"><div style="width:0%;background:${lvl.color}" id="bar_${lvl.id}"></div></div></div><div class="levelPop" id="pop_${lvl.id}">0</div><div class="levelBtns"><button class="lvlBtn minus" data-lvl="${lvl.id}" data-act="minus">−</button><button class="lvlBtn" data-lvl="${lvl.id}" data-act="plus">+</button></div>`;
+    row.addEventListener('click', (e) => { if (e.target.closest('.lvlBtn')) return; showCodex(lvl.id); });
+    levelsContainer.appendChild(row);
+  });
+  levelsContainer.querySelectorAll('.lvlBtn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const lvlId = btn.dataset.lvl; const act = btn.dataset.act;
+      const lvl = TROPHIC_LEVELS.find(l => l.id === lvlId);
+      const energyCost = lvl.baseCost; const rupiahCost = getPrice(lvlId);
+      if (act === 'plus') {
+        if (state.energy < energyCost) { addLog('Energi kurang!', 'bad'); return; }
+        if (state.coins < rupiahCost) {
+          showModal('💸 SALDO TIDAK CUKUP', `<p class="center">Butuh <b>${formatRupiah(rupiahCost)}</b> untuk <b>${lvl.name}</b>.</p><p class="center">Saldo: <b style="color:#d1325a;">${formatRupiah(state.coins)}</b></p><p class="center" style="font-size:10.5px;">💡 Main kuis untuk dapat saldo!</p>`, 'MAIN KUIS', () => { modal.classList.remove('show'); showQuizMenu(); }, true, null);
+          return;
+        }
+        if (state.populations[lvlId] >= lvl.max) { addLog(`${lvl.name} sudah maksimal!`, 'warn'); return; }
+        state.energy -= energyCost; state.coins -= rupiahCost; state.totalSpent += rupiahCost;
+        const add = lvlId === 'prod' ? 10 : lvlId === 'herb' ? 4 : 1;
+        state.populations[lvlId] = Math.min(lvl.max, state.populations[lvlId] + add);
+        addLog(`+${add} ${lvl.name} (−${formatRupiah(rupiahCost)})`, 'good');
+        AudioEngine.playBuy();
+      } else {
+        if (state.populations[lvlId] <= 0) { addLog(`${lvl.name} kosong.`, 'warn'); return; }
+        state.energy += Math.floor(energyCost * 0.5);
+        state.coins += Math.floor(rupiahCost * 0.5);
+        const rem = lvlId === 'prod' ? 10 : lvlId === 'herb' ? 4 : 1;
+        state.populations[lvlId] = Math.max(0, state.populations[lvlId] - rem);
+        addLog(`−${rem} ${lvl.name}`, 'warn');
+      }
+      syncFishMeshes(); updateUI(); checkMission(); saveUserState();
+    });
+  });
+}
+buildLevelUI();
+
+const statDay = document.getElementById('statDay');
+const statEnergy = document.getElementById('statEnergy');
+const statBio = document.getElementById('statBio');
+const statCoin = document.getElementById('statCoin');
+const tempBar = document.getElementById('tempBar');
+const phBar = document.getElementById('phBar');
+const oxyBar = document.getElementById('oxyBar');
+const tempVal = document.getElementById('tempVal');
+const phVal = document.getElementById('phVal');
+const oxyVal = document.getElementById('oxyVal');
+
+function updateUI() {
+  calcBiodiversity();
+  statDay.textContent = state.day;
+  statEnergy.textContent = Math.floor(state.energy);
+  statBio.textContent = state.biodiversity + '%';
+  statCoin.textContent = formatRupiah(state.coins);
+  document.getElementById('userNameLabel').textContent = state.playerName;
+  tempBar.style.width = Math.max(0, Math.min(100, ((state.env.temp - 18) / 18) * 100)) + '%';
+  tempVal.textContent = state.env.temp.toFixed(1) + '°C';
+  phBar.style.width = Math.max(0, Math.min(100, ((state.env.ph - 6.5) / 2.5) * 100)) + '%';
+  phVal.textContent = state.env.ph.toFixed(2);
+  oxyBar.style.width = Math.max(0, Math.min(100, (state.env.oxygen / 120) * 100)) + '%';
+  oxyVal.textContent = Math.floor(state.env.oxygen) + '%';
+  TROPHIC_LEVELS.forEach(lvl => {
+    const pop = state.populations[lvl.id];
+    const pct = (pop / lvl.max) * 100;
+    const bar = document.getElementById('bar_' + lvl.id);
+    const popEl = document.getElementById('pop_' + lvl.id);
+    const priceEl = document.getElementById('price_' + lvl.id);
+    const row = levelsContainer.querySelector(`[data-lvl="${lvl.id}"]`);
+    if (bar) bar.style.width = pct + '%';
+    if (popEl) popEl.textContent = pop;
+    if (priceEl) priceEl.textContent = compactRp(getPrice(lvl.id));
+    if (row) { row.classList.remove('cant-afford'); if (state.coins < getPrice(lvl.id)) row.classList.add('cant-afford'); }
+  });
+  updateMission(); updateEventPanel();
+}
+
+function showChart() {
+  const hist = state.history.length > 0 ? state.history : [{day:1, prod:state.populations.prod, herb:state.populations.herb, carn:state.populations.carn, apex:state.populations.apex}];
+  const W = 600, H = 260;
+  const maxDay = Math.max(hist[hist.length-1].day, 2);
+  const maxVal = Math.max(...hist.map(h => Math.max(h.prod, h.herb, h.carn, h.apex)), 20);
+  const plot = (key) => hist.map((h, i) => `${(h.day/maxDay)*W},${H - (h[key]/maxVal)*H*0.9 - H*0.05}`).map((p, i) => (i === 0 ? 'M' : 'L') + p).join(' ');
+  const html = `<p class="center" style="margin-bottom:6px;color:#2a6a8a;">📊 Populasi Hari 1 → ${state.day}</p><div style="background:#f0faff;border-radius:10px;padding:8px;border:1.5px solid #b8e2ff;"><svg width="100%" height="200" viewBox="0 0 ${W} ${H}" style="display:block;"><rect width="${W}" height="${H}" fill="#f0faff"/><path d="${plot('prod')}" stroke="#00cc88" stroke-width="3" fill="none"/><path d="${plot('herb')}" stroke="#0088bb" stroke-width="3" fill="none"/><path d="${plot('carn')}" stroke="#e58a00" stroke-width="3" fill="none"/><path d="${plot('apex')}" stroke="#d1325a" stroke-width="3" fill="none"/></svg></div><div style="display:flex;justify-content:center;gap:10px;font-size:9px;margin-top:6px;font-weight:700;"><span style="color:#00a878;">🟢 Produsen</span><span style="color:#0088bb;">🔵 Herbivora</span><span style="color:#e58a00;">🟡 Karnivora</span><span style="color:#d1325a;">🔴 Apex</span></div>`;
+  showModal('📊 Statistik', html, 'TUTUP');
+}
+
+document.getElementById('btnPhotosyn').addEventListener('click', actionPhotosyn);
+document.getElementById('btnFilter').addEventListener('click', actionFilter);
+document.getElementById('btnRestock').addEventListener('click', actionRestock);
+document.getElementById('btnChart').addEventListener('click', showChart);
+document.getElementById('btnInfo').addEventListener('click', showAllCodex);
+document.getElementById('btnRank').addEventListener('click', showLeaderboard);
+document.getElementById('btnQuiz').addEventListener('click', showQuizMenu);
+document.getElementById('eventPanel').addEventListener('click', () => {
+  if (!state.currentEvent) return;
+  const e = state.currentEvent;
+  const prog = e.progress(state, state.extra);
+  showModal('🎪 Event Hari Ini', `<p class="center" style="font-size:30px;">${e.icon}</p><p class="center" style="font-size:13px;"><b>${e.title}</b></p><p class="center" style="font-size:10.5px;">${e.desc}</p><p class="center" style="font-size:11px;">Progress: <b>${prog}</b></p><p class="center" style="color:#d4a017;font-weight:800;">Reward: ${e.rewardText}</p>${state.eventCompleted ? '<p class="center" style="color:#00a878;">✅ Selesai!</p>' : ''}`, 'TUTUP');
+});
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta(); const t = clock.getElapsedTime();
+  for (const lvl of TROPHIC_LEVELS) {
+    for (const fish of fishMeshes[lvl.id]) {
+      const ud = fish.userData;
+      ud.angle += dt * ud.speed * 0.5;
+      const r = ud.orbitR;
+      fish.position.x = Math.cos(ud.angle) * r;
+      fish.position.z = Math.sin(ud.angle) * r;
+      fish.position.y = ud.yBase + Math.sin(t * ud.ySpeed + ud.yPhase) * 1.2;
+      fish.rotation.y = Math.atan2(-Math.cos(ud.angle), -Math.sin(ud.angle)) + Math.PI/2;
+      fish.rotation.z = Math.sin(t * ud.ySpeed + ud.yPhase) * 0.15;
+      const dy = Math.cos(t * ud.ySpeed + ud.yPhase) * 1.2 * ud.ySpeed;
+      fish.rotation.x = -dy * 0.15;
+      if (ud.tail) ud.tail.rotation.z = Math.sin(t * 7 + ud.wobble) * 0.4;
+    }
+  }
+  for (const flora of allFlora) {
+    const type = flora.userData.type;
+    const phase = flora.userData.phase;
+    const swaySpeed = flora.userData.swaySpeed || 0.7;
+    if (type === 'seagrass' || type === 'kelp' || type === 'clump') {
+      flora.userData.segs.forEach((seg, i) => { seg.rotation.z = Math.sin(t * swaySpeed + phase + i * 0.5) * (0.08 + i * 0.03); });
+    } else if (type === 'shortgrass') {
+      flora.userData.segs.forEach((seg, i) => { seg.rotation.z = Math.sin(t * swaySpeed + phase + i * 0.3) * 0.15; });
+    } else if (type === 'caulerpa') { flora.rotation.z = Math.sin(t * swaySpeed + phase) * 0.05; }
+    else if (type === 'redalgae') { flora.rotation.z = Math.sin(t * swaySpeed + phase) * 0.06; }
+    else if (type === 'sponge') { const pulse = 1 + Math.sin(t * 0.8 + phase) * 0.03; flora.scale.set(pulse, 1 + Math.sin(t * 0.8 + phase) * 0.02, pulse); }
+    else if (type === 'urchin') { flora.rotation.y = Math.sin(t * 0.3 + phase) * 0.05; }
+  }
+  for (const b of bubbles) {
+    b.position.y += b.userData.speed;
+    b.position.x += Math.sin(t * 2 + b.userData.wobblePhase) * b.userData.wobbleAmp * dt * 20;
+    if (b.position.y > 9) { b.position.y = 0.2; b.position.x = (Math.random() - 0.5) * 18; b.position.z = (Math.random() - 0.5) * 18; }
+  }
+  for (const p of plankton) {
+    p.position.y += Math.sin(t * p.userData.speed + p.userData.phase) * dt * 0.1;
+    p.position.x += p.userData.drift * dt * 10 + Math.cos(t * p.userData.speed * 0.5 + p.userData.phase) * dt * 0.05;
+    if (p.position.y > 8.5) p.position.y = 0.5;
+    if (p.position.y < 0.3) p.position.y = 7.5;
+    if (p.position.x > 9) p.position.x = -9;
+    if (p.position.x < -9) p.position.x = 9;
+  }
+  for (const ray of godRays) {
+    ray.material.opacity = ray.userData.baseOpacity * (0.6 + Math.sin(t * ray.userData.speed + ray.userData.phase) * 0.4);
+    ray.rotation.z = ray.userData.baseRotZ + Math.sin(t * ray.userData.swaySpeed) * 0.15;
+  }
+  causticTex.offset.x = t * 0.02; causticTex.offset.y = t * 0.015;
+  causticTex2.offset.x = -t * 0.03; causticTex2.offset.y = t * 0.025;
+  causticMat.opacity = 0.25 + state.sunlight * 0.25;
+  causticMat2.opacity = 0.15 + state.sunlight * 0.15;
+  const cleanColor = new THREE.Color(0x2a8fc4);
+  const pollColor = new THREE.Color(0x5a7a5a);
+  scene.fog.color = cleanColor.clone().lerp(pollColor, state.pollution * 0.5);
+  sunLight.intensity = 1.0 + state.sunlight * 1.4;
+  const bleach = Math.max(0, (state.env.temp - 29) / 7) + state.pollution * 0.25;
+  coralObjects.forEach(c => {
+    c.traverse(ch => {
+      if (ch.material && ch.material.color) {
+        if (!ch.userData.origColor) ch.userData.origColor = ch.material.color.clone();
+        ch.material.color.copy(ch.userData.origColor);
+        ch.material.color.lerp(new THREE.Color(0xffffff), Math.min(1, bleach));
+      }
+    });
+  });
+  const camAngle = t * 0.06;
+  camera.position.x = Math.sin(camAngle) * 14;
+  camera.position.z = Math.cos(camAngle) * 14;
+  camera.position.y = 4.5 + Math.sin(t * 0.25) * 0.8;
+  camera.lookAt(0, 2, 0);
+  renderer.render(scene, camera);
+}
+animate();
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function showRecentUsers() {
+  const users = getRegisteredUsers();
+  const recentEl = document.getElementById('loginRecent');
+  if (users.length === 0) { recentEl.innerHTML = ''; return; }
+  const top5 = users.slice(-5).reverse();
+  recentEl.innerHTML = '<div style="margin-bottom:4px;">Nama terakhir:</div>' + top5.map(u => `<span data-name="${u}">${u}</span>`).join('');
+  recentEl.querySelectorAll('span').forEach(s => { s.onclick = () => { document.getElementById('loginInput').value = s.dataset.name; }; });
+}
+document.getElementById('loginStudent').addEventListener('click', () => {
+  const name = document.getElementById('loginInput').value.trim();
+  if (!name) { alert('Masukkan nama dulu ya!'); return; }
+  if (name.length > 20) { alert('Maksimal 20 karakter!'); return; }
+  loginAs(name);
+});
+document.getElementById('loginTeacher').addEventListener('click', () => {
+  document.getElementById('loginScreen').style.display = 'none';
+  showTeacherDashboard();
+  document.getElementById('loginScreen').style.display = '';
+});
+document.getElementById('loginInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('loginStudent').click(); });
+
+function loginAs(name) {
+  AudioEngine.init(); AudioEngine.resume();
+  registerUser(name);
+  const saved = loadUserState(name);
+  if (saved) {
+    Object.assign(state, saved);
+    state.playerName = name;
+    if (!state.history) state.history = [];
+    if (!state.quizStats) state.quizStats = { total: 0, correct: 0, wrong: 0 };
+    if (!state.categoryStats) state.categoryStats = {};
+    if (!state.extra) state.extra = { quizStreak: 0, perfectThisSession: false, quizSessionsToday: 0 };
+    if (state.quizPool === undefined) state.quizPool = [];
+    if (state.priceInflation === undefined) state.priceInflation = 1.0;
+    if (state.totalSpent === undefined) state.totalSpent = 0;
+    if (state.totalEarned === undefined) state.totalEarned = 0;
+    document.getElementById('loginScreen').style.display = 'none';
+    syncFishMeshes(); updateUI(); updateMission();
+    if (!state.currentEvent) pickDailyEvent(); else updateEventPanel();
+    logBox.innerHTML = '';
+    showModal('🌊 Selamat Datang Kembali!', `<p class="center">Halo <b>${name}</b>!</p><p class="center" style="font-size:10.5px;">Hari ke-${state.day} • Skor: <b>${state.score}</b><br>Saldo: <b>${formatRupiah(state.coins)}</b> • Kuis: <b>${state.quizStats.correct}/${state.quizStats.total}</b></p>`, 'LANJUT MENYELAM');
+    setTimeout(() => AudioEngine.startMusic(), 500);
+  } else {
+    resetGame();
+    state.playerName = name;
+    updateUI();
+    document.getElementById('loginScreen').style.display = 'none';
+    addLog(`Selamat datang, ${name}!`, 'good');
+    showModal('🌊 Selamat Datang!', `<p class="center">Halo <b>${name}</b>!</p><p style="font-size:10.5px;text-align:left;">🎯 <b>Misi:</b> Pulihkan ekosistem laut<br>📝 <b>Kuis:</b> 6 kategori, 65 soal<br>🎪 <b>Event harian</b> dengan hadiah<br>🎖️ <b>10 Achievement</b> untuk dikoleksi<br>💰 <b>Reward:</b> Rp per jawaban benar<br>🔊 <b>Audio aktif</b> — klik tombol di kanan atas untuk toggle<br>⚠️ Harga biota naik 15%/hari</p>`, 'MULAI MENYELAM');
+    setTimeout(() => AudioEngine.startMusic(), 500);
+  }
+  saveUserState();
+}
+showRecentUsers();
+</script>
+</body>
+</html>
